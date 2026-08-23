@@ -80,4 +80,5 @@ export const callGeminiStylist = onCall(
 );
 
 export { processClothingUpload } from "./processClothingUpload";
+export { removeImageBackground } from "./removeImageBackground";
 

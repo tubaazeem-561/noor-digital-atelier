@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processClothingUpload = exports.callGeminiStylist = void 0;
+exports.removeImageBackground = exports.processClothingUpload = exports.callGeminiStylist = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const admin = require("firebase-admin");
@@ -49,4 +49,6 @@ exports.callGeminiStylist = (0, https_1.onCall)({ secrets: [geminiApiKey] }, asy
 });
 var processClothingUpload_1 = require("./processClothingUpload");
 Object.defineProperty(exports, "processClothingUpload", { enumerable: true, get: function () { return processClothingUpload_1.processClothingUpload; } });
+var removeImageBackground_1 = require("./removeImageBackground");
+Object.defineProperty(exports, "removeImageBackground", { enumerable: true, get: function () { return removeImageBackground_1.removeImageBackground; } });
 //# sourceMappingURL=index.js.map
