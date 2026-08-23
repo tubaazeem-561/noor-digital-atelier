@@ -1,5 +1,5 @@
 import React from 'react';
-import { NOOR_LOGO_URL } from '../data/initialData';
+import { NOOR_LOGO_URL, THEME_PRESETS } from '../data/initialData';
 import { TabType, UserAccount, GenderPreference } from '../types';
 
 interface HeaderProps {
@@ -32,9 +32,14 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const activeThemeBadge = themeBadges[currentGender] || themeBadges.woman;
+  const currentPreset = THEME_PRESETS[currentGender] || THEME_PRESETS.woman;
+  const { bg: headerBg, border: headerBorder, mobileBg } = currentPreset.headerColors;
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-[#4A0E2E] backdrop-blur-md border-b border-[#5E123B] transition-colors duration-300 shadow-md">
+    <header
+      style={{ backgroundColor: headerBg, borderColor: headerBorder }}
+      className="fixed top-0 w-full z-50 backdrop-blur-md border-b transition-colors duration-300 shadow-md"
+    >
       <div className="h-20 max-w-[1024px] mx-auto px-6 lg:px-10 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <button
@@ -158,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               onClick={() => onOpenAuth('login')}
-              className="px-4 py-2 bg-white text-[#4A0E2E] hover:bg-rose-100 font-semibold rounded-full font-serif text-xs transition-all shadow-sm flex items-center gap-1.5 focus:outline-none cursor-pointer"
+              className="px-4 py-2 bg-white text-[var(--theme-primary)] hover:bg-white/90 font-semibold rounded-full font-serif text-xs transition-all shadow-sm flex items-center gap-1.5 focus:outline-none cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">login</span>
               <span>Sign In</span>
@@ -168,7 +173,10 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Mobile Tab Bar */}
-      <div className="md:hidden flex items-center justify-around border-t border-white/15 bg-[#3D0A24] px-2 py-2 text-white">
+      <div
+        style={{ backgroundColor: mobileBg }}
+        className="md:hidden flex items-center justify-around border-t border-white/15 px-2 py-2 text-white transition-colors duration-300"
+      >
         {(['home', 'photo', 'closet', 'style', 'saved'] as TabType[]).map((tab) => (
           <button
             key={tab}

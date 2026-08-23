@@ -436,10 +436,7 @@ export function App() {
       </main>
 
       {/* Global Footer */}
-      <Footer
-        currentGender={currentGender}
-        onOpenModal={(modal) => setActiveAtelierModal(modal)}
-      />
+      <Footer />
 
       {/* Modals & Drawers */}
       <AuthModal

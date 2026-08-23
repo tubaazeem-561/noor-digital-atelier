@@ -69,6 +69,7 @@
   --theme-shadow-lg: 0 14px 32px -6px rgba(13, 31, 56, 0.18), 0 6px 14px -2px rgba(13, 31, 56, 0.09);
 }
 
+[data-theme="others"],
 [data-theme="non-binary"],
 [data-theme="prefer-not-to-say"] {
   --theme-name: 'neutral';

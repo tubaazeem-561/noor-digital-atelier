@@ -384,12 +384,22 @@ export const THEME_PRESETS: Record<
     garments: Garment[];
     looks: Look[];
     defaultSilhouette: UserSilhouette;
+    headerColors: {
+      bg: string;
+      border: string;
+      mobileBg: string;
+    };
   }
 > = {
   woman: {
     name: 'Pink NOOR',
     label: 'Woman',
     tagline: 'Feminine elegance, blush tones & romantic silhouettes',
+    headerColors: {
+      bg: '#4A0E2E',
+      border: '#5E123B',
+      mobileBg: '#3D0A24'
+    },
     heroEditorial: HERO_EDITORIAL_IMAGE_WOMAN,
     defaultPortrait: USER_DEFAULT_PORTRAIT_WOMAN,
     portraits: [
@@ -425,6 +435,11 @@ export const THEME_PRESETS: Record<
     name: 'Blue NOOR',
     label: 'Man',
     tagline: 'Tailored precision, powder blue & midnight navy sartorial luxury',
+    headerColors: {
+      bg: '#0D1F38',
+      border: '#193154',
+      mobileBg: '#0A172B'
+    },
     heroEditorial: HERO_EDITORIAL_IMAGE_MAN,
     defaultPortrait: USER_DEFAULT_PORTRAIT_MAN,
     portraits: [
@@ -460,6 +475,11 @@ export const THEME_PRESETS: Record<
     name: 'Neutral Atelier',
     label: 'Others',
     tagline: 'Minimalist fluid aesthetic, pearl & charcoal harmonies',
+    headerColors: {
+      bg: '#2C1D11',
+      border: '#422D1D',
+      mobileBg: '#21150C'
+    },
     heroEditorial: HERO_EDITORIAL_IMAGE_NEUTRAL,
     defaultPortrait: USER_DEFAULT_PORTRAIT_NEUTRAL,
     portraits: [
