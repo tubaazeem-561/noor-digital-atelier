@@ -18,7 +18,8 @@ import {
   getDefaultAccount,
   setActiveUserId,
   updateAccountData,
-  authLogout
+  authLogout,
+  subscribeAuthState
 } from './services/authService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -86,6 +87,16 @@ export function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', currentGender);
   }, [currentGender]);
+
+  // Subscribe to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = subscribeAuthState((account) => {
+      if (account) {
+        setCurrentUser(account);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Check if onboarding is required (first-time login / signup without onboarding)
   const isFirstTimeOnboarding = Boolean(
