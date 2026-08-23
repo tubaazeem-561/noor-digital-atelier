@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Garment, GarmentCategory, GenderPreference } from '../types';
+import { uploadAndProcessClothingPhoto } from '../services/clothingPipelineService';
 
 interface AddGarmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddGarment: (garment: Garment) => void;
   currentGender?: GenderPreference;
+  userUid?: string;
 }
 
 const SAMPLE_GARMENT_PRESETS = [
@@ -45,7 +47,8 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   isOpen,
   onClose,
   onAddGarment,
-  currentGender = 'woman'
+  currentGender = 'woman',
+  userUid = 'demo-user'
 }) => {
   const categoryOptionsByGender: Record<GenderPreference, { key: GarmentCategory; label: string }[]> = {
     woman: [
@@ -81,17 +84,36 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const [category, setCategory] = useState<GarmentCategory>(availableCategories[0].key);
   const [image, setImage] = useState('');
   const [notes, setNotes] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedGarment, setProcessedGarment] = useState<Garment | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const processUploadedFile = async (file: File) => {
+    setIsProcessing(true);
+    try {
+      const result = await uploadAndProcessClothingPhoto(file, name || file.name, userUid, currentGender);
+      setImage(result.imageUrl);
+      setCategory(result.garment.category);
+      if (result.garment.name && result.garment.name !== 'Uploaded Garment') {
+        setName(result.garment.name);
+      }
+      setProcessedGarment(result.garment);
+    } catch (err) {
+      console.error('Error processing upload:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       alert('Please enter a name for this clothing item.');
       return;
     }
 
-    const newGarment: Garment = {
+    let finalGarment: Garment = processedGarment || {
       id: `garment-${Date.now()}`,
       name: name.trim(),
       brand: 'Personal Closet',
@@ -106,10 +128,18 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       tags: [category]
     };
 
-    onAddGarment(newGarment);
+    finalGarment = {
+      ...finalGarment,
+      name: name.trim(),
+      category: category as any,
+      notes: notes || finalGarment.notes
+    };
+
+    onAddGarment(finalGarment);
     setName('');
     setImage('');
     setNotes('');
+    setProcessedGarment(null);
     onClose();
   };
 
@@ -123,13 +153,7 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImage(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      processUploadedFile(file);
     }
   };
 
@@ -153,14 +177,31 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
           </button>
         </div>
 
+        {/* AI Processing Status Banner */}
+        {isProcessing && (
+          <div className="p-4 bg-[var(--theme-surface-subtle)] border border-[var(--theme-accent)] rounded-2xl flex items-center gap-3 animate-pulse">
+            <div className="w-5 h-5 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-xs font-sans space-y-0.5">
+              <span className="font-semibold text-[var(--theme-primary)] block">
+                AI Vision Pipeline Active ✨
+              </span>
+              <span className="text-[var(--theme-body)] block">
+                Gemini 2.5 Flash is removing background, normalizing studio framing & classifying category...
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Upload or Photo Selection area */}
         <div className="space-y-3">
           <label className="block text-xs font-sans uppercase tracking-wider text-[var(--theme-body)] font-semibold">
             Photo of your item
           </label>
           <div className="flex items-center gap-4">
-            <div className="w-24 h-28 rounded-2xl bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] overflow-hidden flex items-center justify-center shrink-0">
-              {image ? (
+            <div className="w-24 h-28 rounded-2xl bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] overflow-hidden flex items-center justify-center shrink-0 relative">
+              {isProcessing ? (
+                <div className="w-6 h-6 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+              ) : image ? (
                 <img src={image} alt="Preview" className="w-full h-full object-cover" />
               ) : (
                 <span className="material-symbols-outlined text-3xl text-[var(--theme-muted)]">
@@ -172,11 +213,12 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
             <div className="flex-1 space-y-2">
               <label className="w-full py-2.5 px-4 bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-hover)] text-[var(--theme-primary-text)] text-xs font-serif rounded-full cursor-pointer flex items-center justify-center gap-2 transition-colors shadow-[var(--theme-shadow-sm)]">
                 <span className="material-symbols-outlined text-base">photo_camera</span>
-                <span>Take or Upload Photo</span>
+                <span>{isProcessing ? 'Processing Image...' : 'Take or Upload Photo'}</span>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleFileUpload}
+                  disabled={isProcessing}
                   className="hidden"
                 />
               </label>

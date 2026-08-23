@@ -15,6 +15,8 @@ export async function uploadGarmentImage(file: File, userId: string): Promise<st
   return downloadUrl;
 }
 
+export const uploadClothingImage = uploadGarmentImage;
+
 /**
  * Uploads a user avatar/portrait image to Firebase Storage under `users/{userId}/avatar/{filename}`
  * and returns the public download URL.

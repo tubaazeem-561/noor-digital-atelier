@@ -21,6 +21,8 @@ import {
   authLogout,
   subscribeAuthState
 } from './services/authService';
+import { getUserClosetItems } from './services/firestoreService';
+import { mapFirestoreCategoryToGarmentCategory } from './services/clothingPipelineService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomeScreen } from './components/HomeScreen';
@@ -97,6 +99,36 @@ export function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Sync closetItems from Firestore collection
+  useEffect(() => {
+    const uid = currentUser?.id || 'demo-user';
+    getUserClosetItems(uid).then((items) => {
+      if (items && items.length > 0) {
+        const firestoreGarments: Garment[] = items.map((item) => {
+          const mappedCategory = mapFirestoreCategoryToGarmentCategory(item.category, currentGender);
+          return {
+            id: item.id || `closet-${Date.now()}`,
+            name: item.name || 'Wardrobe Piece',
+            brand: 'Personal Closet',
+            category: mappedCategory as any,
+            image: item.imageUrl,
+            color: item.color || '#E8DED8',
+            material: 'Personal Wardrobe',
+            notes: `Category: ${item.category}`,
+            isArchived: false,
+            tags: [item.category, mappedCategory]
+          };
+        });
+
+        setGarments((prev) => {
+          const existingIds = new Set(prev.map((g) => g.id));
+          const newItems = firestoreGarments.filter((g) => !existingIds.has(g.id));
+          return [...newItems, ...prev];
+        });
+      }
+    }).catch((err) => console.warn('Could not fetch Firestore closetItems:', err));
+  }, [currentUser?.id, currentGender]);
 
   // Check if onboarding is required (first-time login / signup without onboarding)
   const isFirstTimeOnboarding = Boolean(
@@ -460,6 +492,7 @@ export function App() {
         onClose={() => setIsAddGarmentOpen(false)}
         onAddGarment={handleAddGarment}
         currentGender={currentGender}
+        userUid={currentUser?.id || 'demo-user'}
       />
 
       <GarmentDetailModal

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.callGeminiStylist = void 0;
+exports.processClothingUpload = exports.callGeminiStylist = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const admin = require("firebase-admin");
@@ -47,4 +47,6 @@ exports.callGeminiStylist = (0, https_1.onCall)({ secrets: [geminiApiKey] }, asy
         throw new https_1.HttpsError("internal", err.message || "Failed to query Gemini AI.");
     }
 });
+var processClothingUpload_1 = require("./processClothingUpload");
+Object.defineProperty(exports, "processClothingUpload", { enumerable: true, get: function () { return processClothingUpload_1.processClothingUpload; } });
 //# sourceMappingURL=index.js.map
