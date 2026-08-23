@@ -13,7 +13,6 @@ interface StyleScreenProps {
 interface OccasionOption {
   key: StylingOccasionKey;
   title: string;
-  emoji: string;
   icon: string;
   subtitle: string;
   description: string;
@@ -24,7 +23,6 @@ const OCCASIONS: OccasionOption[] = [
   {
     key: 'Date Night',
     title: 'Date Night',
-    emoji: '🌙',
     icon: 'nightlife',
     subtitle: 'For dates, dinner, romantic evenings, and intimate nights out.',
     description: 'Elevated silhouette pairing fluid textures with refined structure.',
@@ -33,7 +31,6 @@ const OCCASIONS: OccasionOption[] = [
   {
     key: 'Wedding Guest',
     title: 'Wedding Guest',
-    emoji: '💐',
     icon: 'celebration',
     subtitle: 'For weddings, receptions, and elegant celebrations.',
     description: 'Sophisticated celebration attire balancing poise with celebratory grace.',
@@ -42,7 +39,6 @@ const OCCASIONS: OccasionOption[] = [
   {
     key: 'Casual',
     title: 'Casual',
-    emoji: '☀️',
     icon: 'wb_sunny',
     subtitle: 'For everyday outings, meetups, cafes, and relaxed moments.',
     description: 'Effortless comfort with clean, harmonic lines and casual poise.',
@@ -51,7 +47,6 @@ const OCCASIONS: OccasionOption[] = [
   {
     key: 'Professional / Formal',
     title: 'Professional / Formal',
-    emoji: '💼',
     icon: 'work',
     subtitle: 'For work, meetings, presentations, interviews, and formal events.',
     description: 'Crisp sartorial tailoring with sharp focus and understated authority.',
@@ -60,7 +55,6 @@ const OCCASIONS: OccasionOption[] = [
   {
     key: 'Gym',
     title: 'Gym',
-    emoji: '🏋️',
     icon: 'fitness_center',
     subtitle: 'For workouts, training, yoga, and athletic movement.',
     description: 'Breathable, flexible athletic pairing for peak dynamic comfort.',
@@ -69,7 +63,6 @@ const OCCASIONS: OccasionOption[] = [
   {
     key: 'Festive / Party',
     title: 'Festive / Party',
-    emoji: '🎉',
     icon: 'festival',
     subtitle: 'For festivals, parties, birthdays, galas, and special milestones.',
     description: 'Vibrant statement curation with tactile energy and celebratory flair.',
@@ -330,8 +323,7 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
                 className="group p-6 sm:p-7 rounded-3xl bg-[var(--theme-surface)] hover:bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] hover:border-[var(--theme-primary)] text-left transition-all duration-300 shadow-[var(--theme-shadow-sm)] hover:shadow-[var(--theme-shadow-md)] flex flex-col justify-between h-[230px] cursor-pointer"
               >
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-3xl sm:text-4xl">{occ.emoji}</span>
+                  <div className="flex items-center justify-end">
                     <span className="text-[10px] font-sans font-semibold uppercase tracking-wider text-[var(--theme-primary)] bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] px-2.5 py-1 rounded-full">
                       0{idx + 1}
                     </span>
@@ -400,7 +392,6 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
 
             {selectedOccasion && (
               <div className="flex items-center gap-2 px-3 py-1 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-full text-xs font-sans text-[var(--theme-heading)]">
-                <span>{selectedOccasion.emoji}</span>
                 <span className="font-semibold">{selectedOccasion.title}</span>
               </div>
             )}

@@ -385,6 +385,7 @@ export function App() {
         {activeTab === 'closet' && (
           <ClosetScreen
             garments={garments}
+            currentGender={currentGender}
             onAddGarmentClick={() => {
               setIsAddGarmentOpen(true);
             }}
@@ -461,6 +462,7 @@ export function App() {
         isOpen={isAddGarmentOpen}
         onClose={() => setIsAddGarmentOpen(false)}
         onAddGarment={handleAddGarment}
+        currentGender={currentGender}
       />
 
       <GarmentDetailModal

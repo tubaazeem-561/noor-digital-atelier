@@ -17,22 +17,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const currentPreset = THEME_PRESETS[currentGender] || THEME_PRESETS.woman;
 
-  const narrativeText: Record<GenderPreference, string> = {
-    woman:
-      'Your bespoke digital atelier is active. Today’s curation reflects an editorial study in fluid silk drapes, plush velvets, and romantic burgundy harmonies.',
-    man:
-      'Your sartorial atelier is calibrated. Today’s curation emphasizes structured peaked lapels, midnight navy cashmere, and crisp powder blue tailoring.',
-    'non-binary':
-      'Your fluid atelier is calibrated. Today’s curation emphasizes minimalist alabaster draping, architectural micro-pleats, and sculptural silhouette balance.',
-    'prefer-not-to-say':
-      'Your bespoke atelier is calibrated. Today’s curation explores versatile proportions, tactile natural fibers, and timeless minimalist aesthetics.'
-  };
-
   const aiTagline: Record<GenderPreference, string> = {
     woman: 'Curating romantic silhouettes & silk drape...',
     man: 'Curating sartorial tailoring & midnight cashmere...',
-    'non-binary': 'Curating architectural fluid drapes & volume...',
-    'prefer-not-to-say': 'Curating timeless bespoke proportions...'
+    others: 'Curating architectural fluid drapes & volume...'
   };
 
   return (
@@ -48,9 +36,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             Welcome Back, <br />
             <span className="italic font-light text-[var(--theme-primary)]">{userSilhouette.name}.</span>
           </h1>
-          <p className="font-sans text-[var(--theme-body)] text-lg max-w-lg leading-relaxed">
-            {narrativeText[currentGender] || narrativeText.woman}
-          </p>
+
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <button
               onClick={onQuickStyle}
@@ -73,25 +59,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* Editorial Visual Card */}
+        {/* Minimal Subtle Graphic Illustration Element (Replacing Person Photo) */}
         <div className="lg:col-span-5 relative group">
-          <div className="relative overflow-hidden rounded-t-[140px] rounded-b-[28px] bg-[var(--theme-surface-subtle)] aspect-[3/4] shadow-[var(--theme-shadow-lg)] border-2 border-[var(--theme-border)] transition-transform duration-500 group-hover:scale-[1.01]">
-            <img
-              alt="NOOR Fashion Model Editorial"
-              className="w-full h-full object-cover object-center filter saturate-[0.98]"
-              src={currentPreset.heroEditorial}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--theme-primary)]/70 via-transparent to-transparent pointer-events-none"></div>
+          <div className="relative overflow-hidden rounded-3xl bg-[var(--theme-surface-subtle)] p-6 shadow-[var(--theme-shadow-md)] border border-[var(--theme-border)] flex flex-col justify-between h-[280px]">
+            {/* Subtle Minimal Graphic Backdrop Pattern */}
+            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_top_right,var(--theme-primary)_0%,transparent_60%)] pointer-events-none"></div>
 
-            {/* Vertical Edition Label */}
-            <div className="absolute top-8 right-6 text-white/95 text-xs font-mono uppercase tracking-[0.2em] [writing-mode:vertical-lr] drop-shadow-md">
-              NOOR Atelier • {currentPreset.name}
+            <div className="flex items-start justify-between relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-[var(--theme-surface)] border border-[var(--theme-border)] flex items-center justify-center text-[var(--theme-primary)] shadow-[var(--theme-shadow-sm)]">
+                <span className="material-symbols-outlined text-2xl">diamond</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[var(--theme-muted)] bg-[var(--theme-surface)] border border-[var(--theme-border)] px-3 py-1 rounded-full">
+                NOOR • {currentPreset.name}
+              </span>
             </div>
 
-            {/* AI Analysis Active Tag */}
-            <div className="absolute bottom-6 left-6 right-6 p-4 bg-[var(--theme-glass)] backdrop-blur-md rounded-2xl border border-[var(--theme-border)] shadow-[var(--theme-shadow-sm)] flex items-center justify-between">
+            {/* Minimalist Hanger & Grid Motif */}
+            <div className="relative z-10 flex items-center justify-center my-auto py-2">
+              <svg className="w-20 h-20 text-[var(--theme-primary)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.38-1 1.72V7l7 4a2 2 0 0 1 1 1.73V15a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2.27A2 2 0 0 1 3 11l7-4V5.72A2 2 0 0 1 12 2z"/>
+              </svg>
+            </div>
+
+            {/* AI Status Tag */}
+            <div className="relative z-10 p-3.5 bg-[var(--theme-glass)] backdrop-blur-md rounded-2xl border border-[var(--theme-border)] shadow-[var(--theme-shadow-sm)] flex items-center justify-between">
               <div className="space-y-0.5">
-                <span className="text-[11px] font-sans uppercase tracking-widest text-[var(--theme-primary)] block font-semibold flex items-center gap-1.5">
+                <span className="text-[10px] font-sans uppercase tracking-widest text-[var(--theme-primary)] block font-semibold flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)] animate-pulse inline-block"></span>
                   AI Stylist Active
                 </span>
@@ -185,4 +178,3 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     </div>
   );
 };
-

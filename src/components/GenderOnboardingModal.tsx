@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { GenderPreference } from '../types';
-import { THEME_PRESETS } from '../data/initialData';
 
 interface GenderOnboardingModalProps {
   isOpen: boolean;
@@ -57,10 +56,10 @@ const THEME_OPTIONS: ThemeOption[] = [
     archetypes: ['Executive Sartorial', 'Minimalist Tailoring', 'Tactile Cashmere']
   },
   {
-    id: 'non-binary',
-    title: 'Non-binary',
+    id: 'others',
+    title: 'Others',
     subtitle: 'Neutral Atelier',
-    badge: '⚪ Fluid Minimalist',
+    badge: '⚪ Universal Minimalist',
     colorPreview: {
       bg: '#F6F5F2',
       accent: '#9C856C',
@@ -68,23 +67,8 @@ const THEME_OPTIONS: ThemeOption[] = [
       border: '#DFDAD1'
     },
     description:
-      'Alabaster ivory, deep graphite charcoal, kinetic pleating, and contemporary fluid aesthetics.',
-    archetypes: ['Architectural Drape', 'Kinetic Volume', 'Monochrome']
-  },
-  {
-    id: 'prefer-not-to-say',
-    title: 'Prefer not to say',
-    subtitle: 'Classic Atelier',
-    badge: '⚪ Universal Styling',
-    colorPreview: {
-      bg: '#FAF9F7',
-      accent: '#9C856C',
-      primary: '#18181A',
-      border: '#E2DFD8'
-    },
-    description:
-      'Understated luxury, balanced proportions, and timeless styling calibrated to your personal aesthetic.',
-    archetypes: ['Modern Minimalist', 'Effortless Contour', 'Universal']
+      'Alabaster ivory, deep graphite charcoal, kinetic pleating, and contemporary versatile aesthetics.',
+    archetypes: ['Architectural Drape', 'Kinetic Volume', 'Universal']
   }
 ];
 
@@ -104,7 +88,6 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
 
   const handleGenderClick = (gender: GenderPreference) => {
     setSelectedGender(gender);
-    // Instant live preview of the theme on the HTML document
     document.documentElement.setAttribute('data-theme', gender);
   };
 
@@ -119,7 +102,7 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
         {onClose && !isFirstTime && (
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 w-9 h-9 rounded-full bg-[var(--theme-surface-subtle)] hover:bg-[var(--theme-surface-hover)] text-[var(--theme-heading)] flex items-center justify-center border border-[var(--theme-border)] transition-colors"
+            className="absolute top-6 right-6 w-9 h-9 rounded-full bg-[var(--theme-surface-subtle)] hover:bg-[var(--theme-surface-hover)] text-[var(--theme-heading)] flex items-center justify-center border border-[var(--theme-border)] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
@@ -139,8 +122,8 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
           </p>
         </div>
 
-        {/* 4 Interactive Theme Options */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+        {/* 3 Interactive Theme Options */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
           {THEME_OPTIONS.map((opt) => {
             const isSelected = selectedGender === opt.id;
             return (
@@ -148,7 +131,7 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
                 key={opt.id}
                 type="button"
                 onClick={() => handleGenderClick(opt.id)}
-                className={`text-left p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden flex flex-col justify-between group ${
+                className={`text-left p-4 sm:p-5 rounded-2xl border transition-all relative overflow-hidden flex flex-col justify-between group cursor-pointer ${
                   isSelected
                     ? 'border-[var(--theme-primary)] bg-[var(--theme-surface-subtle)] shadow-[var(--theme-shadow-md)] ring-2 ring-[var(--theme-primary)]/20'
                     : 'border-[var(--theme-border)] bg-[var(--theme-surface)] hover:border-[var(--theme-border-hover)] hover:bg-[var(--theme-surface-hover)]'
@@ -156,7 +139,7 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
               >
                 {/* Visual Swatch Pill */}
                 <div className="flex items-center justify-between w-full mb-3">
-                  <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full border border-black/10 flex items-center gap-1.5"
+                  <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full border border-black/10 flex items-center gap-1"
                     style={{
                       backgroundColor: opt.colorPreview.bg,
                       color: opt.colorPreview.primary,
@@ -186,16 +169,13 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
                     <h3 className="font-serif text-xl text-[var(--theme-heading)] font-medium">
                       {opt.title}
                     </h3>
-                    <span className="text-xs font-mono text-[var(--theme-muted)]">
-                      {opt.subtitle}
-                    </span>
                   </div>
                   <p className="text-xs text-[var(--theme-body)] leading-relaxed">
                     {opt.description}
                   </p>
                 </div>
 
-                {/* Palette Swatches & Tags */}
+                {/* Palette Swatches */}
                 <div className="pt-3 mt-3 border-t border-[var(--theme-border)]/60 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <div
@@ -214,10 +194,6 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
                       title="Primary Action & Typography"
                     />
                   </div>
-
-                  <span className="text-[10px] font-mono text-[var(--theme-muted)] uppercase tracking-wider">
-                    {opt.archetypes[0]}
-                  </span>
                 </div>
               </button>
             );
@@ -252,7 +228,7 @@ export const GenderOnboardingModal: React.FC<GenderOnboardingModalProps> = ({
             onClick={handleContinue}
             className="w-full py-4 bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-hover)] text-[var(--theme-primary-text)] rounded-full font-serif text-base tracking-wide transition-all shadow-[var(--theme-shadow-md)] hover:shadow-[var(--theme-shadow-lg)] flex items-center justify-center gap-2 group cursor-pointer"
           >
-            <span>Continue with {currentOption.subtitle}</span>
+            <span>Continue with {currentOption.title}</span>
             <span className="material-symbols-outlined text-base transition-transform group-hover:translate-x-1">
               arrow_forward
             </span>

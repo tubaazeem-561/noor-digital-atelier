@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Garment, GarmentCategory } from '../types';
+import { Garment, GarmentCategory, GenderPreference } from '../types';
 
 interface AddGarmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddGarment: (garment: Garment) => void;
+  currentGender?: GenderPreference;
 }
 
 const SAMPLE_GARMENT_PRESETS = [
@@ -43,23 +44,45 @@ const SAMPLE_GARMENT_PRESETS = [
 export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   isOpen,
   onClose,
-  onAddGarment
+  onAddGarment,
+  currentGender = 'woman'
 }) => {
+  const categoryOptionsByGender: Record<GenderPreference, { key: GarmentCategory; label: string }[]> = {
+    woman: [
+      { key: 'tops', label: 'Top' },
+      { key: 'bottoms', label: 'Bottom' },
+      { key: 'accessories', label: 'Accessory' },
+      { key: 'bags', label: 'Bag' },
+      { key: 'shoes', label: 'Shoes' },
+      { key: 'hijab', label: 'Hijab' }
+    ],
+    man: [
+      { key: 'shirts/t-shirts', label: 'Shirt / T-Shirt' },
+      { key: 'bottoms', label: 'Bottom' },
+      { key: 'accessories', label: 'Accessory' },
+      { key: 'tie', label: 'Tie' },
+      { key: 'shoes', label: 'Shoes' }
+    ],
+    others: [
+      { key: 'tops', label: 'Top' },
+      { key: 'shirts/t-shirts', label: 'Shirt / T-Shirt' },
+      { key: 'bottoms', label: 'Bottom' },
+      { key: 'accessories', label: 'Accessory' },
+      { key: 'bags', label: 'Bag' },
+      { key: 'shoes', label: 'Shoes' },
+      { key: 'hijab', label: 'Hijab' },
+      { key: 'tie', label: 'Tie' }
+    ]
+  };
+
+  const availableCategories = categoryOptionsByGender[currentGender] || categoryOptionsByGender.woman;
+
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<'tops' | 'bottoms' | 'dresses' | 'shoes' | 'bags' | 'accessories'>('tops');
+  const [category, setCategory] = useState<GarmentCategory>(availableCategories[0].key);
   const [image, setImage] = useState('');
   const [notes, setNotes] = useState('');
 
   if (!isOpen) return null;
-
-  const categoryOptions: { key: 'tops' | 'bottoms' | 'dresses' | 'shoes' | 'bags' | 'accessories'; label: string; emoji: string }[] = [
-    { key: 'tops', label: 'Top', emoji: '👕' },
-    { key: 'bottoms', label: 'Bottom', emoji: '👖' },
-    { key: 'dresses', label: 'Dress', emoji: '👗' },
-    { key: 'shoes', label: 'Shoes', emoji: '👠' },
-    { key: 'bags', label: 'Bag', emoji: '👜' },
-    { key: 'accessories', label: 'Accessory', emoji: '💍' }
-  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +95,7 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       id: `garment-${Date.now()}`,
       name: name.trim(),
       brand: 'Personal Closet',
-      category,
+      category: category as any,
       image:
         image ||
         'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
@@ -133,7 +156,7 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         {/* Upload or Photo Selection area */}
         <div className="space-y-3">
           <label className="block text-xs font-sans uppercase tracking-wider text-[var(--theme-body)] font-semibold">
-            📷 Photo of your item
+            Photo of your item
           </label>
           <div className="flex items-center gap-4">
             <div className="w-24 h-28 rounded-2xl bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] overflow-hidden flex items-center justify-center shrink-0">
@@ -189,13 +212,13 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Category Selector (What is it?) */}
+          {/* Category Selector */}
           <div className="space-y-2">
             <label className="block text-xs font-sans uppercase tracking-wider text-[var(--theme-body)] font-semibold">
-              What is it?
+              Category *
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {categoryOptions.map((opt) => (
+              {availableCategories.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
@@ -206,7 +229,6 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
                       : 'bg-[var(--theme-surface-subtle)] border-[var(--theme-border)] text-[var(--theme-heading)] hover:border-[var(--theme-primary)]'
                   }`}
                 >
-                  <span>{opt.emoji}</span>
                   <span>{opt.label}</span>
                 </button>
               ))}
@@ -223,12 +245,12 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Black Top, Blue Jeans, Pink Dress"
+              placeholder="e.g. Black Top, Blue Jeans, Silk Scarf"
               className="w-full px-4 py-2.5 bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] focus:border-[var(--theme-primary)] rounded-xl text-sm outline-none font-sans text-[var(--theme-heading)]"
             />
           </div>
 
-          {/* Simple Details (Optional) */}
+          {/* Details (Optional) */}
           <div className="space-y-1.5">
             <label className="block text-xs font-sans uppercase tracking-wider text-[var(--theme-body)] font-semibold">
               Details (Optional)

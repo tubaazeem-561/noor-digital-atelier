@@ -1,8 +1,18 @@
 export type TabType = 'home' | 'photo' | 'closet' | 'style' | 'look-detail' | 'saved';
 
-export type GenderPreference = 'woman' | 'man' | 'non-binary' | 'prefer-not-to-say';
+export type GenderPreference = 'woman' | 'man' | 'others';
 
-export type GarmentCategory = 'all' | 'tops' | 'bottoms' | 'dresses' | 'shoes' | 'bags' | 'accessories';
+export type GarmentCategory =
+  | 'all'
+  | 'tops'
+  | 'shirts/t-shirts'
+  | 'bottoms'
+  | 'accessories'
+  | 'bags'
+  | 'shoes'
+  | 'hijab'
+  | 'tie'
+  | 'dresses';
 
 export type StylingOccasionKey =
   | 'Date Night'
@@ -16,7 +26,7 @@ export interface Garment {
   id: string;
   name: string;
   brand?: string;
-  category: 'tops' | 'bottoms' | 'dresses' | 'shoes' | 'bags' | 'accessories';
+  category: 'tops' | 'shirts/t-shirts' | 'bottoms' | 'accessories' | 'bags' | 'shoes' | 'hijab' | 'tie' | 'dresses';
   image: string;
   color?: string;
   material?: string;
@@ -74,4 +84,3 @@ export interface StylingRequest {
   additionalNotes?: string;
   selectedPiecesIds?: string[];
 }
-

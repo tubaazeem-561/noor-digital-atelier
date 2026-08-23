@@ -456,9 +456,9 @@ export const THEME_PRESETS: Record<
       proportionsAnalysis: 'Tailored Athletic V-Silhouette with strong shoulder line and 186 cm proportions.'
     }
   },
-  'non-binary': {
+  others: {
     name: 'Neutral Atelier',
-    label: 'Non-binary',
+    label: 'Others',
     tagline: 'Minimalist fluid aesthetic, pearl & charcoal harmonies',
     heroEditorial: HERO_EDITORIAL_IMAGE_NEUTRAL,
     defaultPortrait: USER_DEFAULT_PORTRAIT_NEUTRAL,
@@ -484,31 +484,6 @@ export const THEME_PRESETS: Record<
       fullLengthPassed: true,
       aestheticScore: 96,
       proportionsAnalysis: 'Fluid streamliner proportions with architectural drape calibration.'
-    }
-  },
-  'prefer-not-to-say': {
-    name: 'Classic Atelier',
-    label: 'Prefer not to say',
-    tagline: 'Modern understated luxury & graphite tones',
-    heroEditorial: HERO_EDITORIAL_IMAGE_NEUTRAL,
-    defaultPortrait: USER_DEFAULT_PORTRAIT_NEUTRAL,
-    portraits: [
-      {
-        name: 'Morgan (Classic)',
-        url: USER_DEFAULT_PORTRAIT_NEUTRAL,
-        notes: 'Balanced Contour • 174cm'
-      }
-    ],
-    garments: [...NEUTRAL_GARMENTS, ...WOMAN_GARMENTS.slice(1, 3)],
-    looks: NEUTRAL_LOOKS,
-    defaultSilhouette: {
-      name: 'Morgan',
-      photoUrl: USER_DEFAULT_PORTRAIT_NEUTRAL,
-      status: 'Portrait Active',
-      lightingPassed: true,
-      fullLengthPassed: true,
-      aestheticScore: 96,
-      proportionsAnalysis: 'Understated balanced geometry calibrated for universal styling.'
     }
   }
 };

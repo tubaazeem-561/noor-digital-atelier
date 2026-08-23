@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Garment, GarmentCategory } from '../types';
+import { Garment, GarmentCategory, GenderPreference } from '../types';
 
 interface ClosetScreenProps {
   garments: Garment[];
@@ -9,6 +9,7 @@ interface ClosetScreenProps {
   onArchiveGarment: (id: string) => void;
   onRestoreGarment: (id: string) => void;
   onStyleWithPieces: (garmentIds: string[]) => void;
+  currentGender?: GenderPreference;
 }
 
 export const ClosetScreen: React.FC<ClosetScreenProps> = ({
@@ -18,7 +19,8 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   onDeleteGarment,
   onArchiveGarment,
   onRestoreGarment,
-  onStyleWithPieces
+  onStyleWithPieces,
+  currentGender = 'woman'
 }) => {
   const [viewMode, setViewMode] = useState<'closet' | 'archive'>('closet');
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory>('all');
@@ -26,15 +28,39 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'latest' | 'name'>('latest');
 
-  const categories: { key: GarmentCategory; label: string }[] = [
-    { key: 'all', label: 'All Pieces' },
-    { key: 'tops', label: 'Tops' },
-    { key: 'bottoms', label: 'Bottoms' },
-    { key: 'dresses', label: 'Dresses' },
-    { key: 'shoes', label: 'Shoes' },
-    { key: 'bags', label: 'Bags' },
-    { key: 'accessories', label: 'Accessories' }
-  ];
+  // Garment Categories dynamically filtered by selected Gender Preference
+  const categoriesByGender: Record<GenderPreference, { key: GarmentCategory; label: string }[]> = {
+    woman: [
+      { key: 'all', label: 'All Pieces' },
+      { key: 'tops', label: 'Tops' },
+      { key: 'bottoms', label: 'Bottoms' },
+      { key: 'accessories', label: 'Accessories' },
+      { key: 'bags', label: 'Bags' },
+      { key: 'shoes', label: 'Shoes' },
+      { key: 'hijab', label: 'Hijab' }
+    ],
+    man: [
+      { key: 'all', label: 'All Pieces' },
+      { key: 'shirts/t-shirts', label: 'Shirts/T-Shirts' },
+      { key: 'bottoms', label: 'Bottoms' },
+      { key: 'accessories', label: 'Accessories' },
+      { key: 'tie', label: 'Tie' },
+      { key: 'shoes', label: 'Shoes' }
+    ],
+    others: [
+      { key: 'all', label: 'All Pieces' },
+      { key: 'tops', label: 'Tops' },
+      { key: 'shirts/t-shirts', label: 'Shirts/T-Shirts' },
+      { key: 'bottoms', label: 'Bottoms' },
+      { key: 'accessories', label: 'Accessories' },
+      { key: 'bags', label: 'Bags' },
+      { key: 'shoes', label: 'Shoes' },
+      { key: 'hijab', label: 'Hijab' },
+      { key: 'tie', label: 'Tie' }
+    ]
+  };
+
+  const categories = categoriesByGender[currentGender] || categoriesByGender.woman;
 
   // Active vs Archived separation
   const activeGarments = garments.filter((g) => !g.isArchived);

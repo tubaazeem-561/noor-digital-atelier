@@ -56,18 +56,11 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
       colors: ['#EEF4FA', '#456F97', '#0D1F38']
     },
     {
-      id: 'non-binary',
-      label: 'Non-binary (Neutral)',
+      id: 'others',
+      label: 'Others (Neutral)',
       icon: '⚪',
       desc: 'Alabaster ivory × Graphite charcoal drape',
       colors: ['#F6F5F2', '#9C856C', '#1C1C1E']
-    },
-    {
-      id: 'prefer-not-to-say',
-      label: 'Prefer not to say',
-      icon: '⚪',
-      desc: 'Warm off-white × Universal balance',
-      colors: ['#FAF9F7', '#9C856C', '#18181A']
     }
   ];
 

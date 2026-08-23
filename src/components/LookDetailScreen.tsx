@@ -89,13 +89,7 @@ export const LookDetailScreen: React.FC<LookDetailScreenProps> = ({
               className="w-full h-full object-cover object-center filter saturate-[0.98]"
             />
 
-            {/* Vertical NOOR AI Branding */}
-            <div className="absolute top-12 right-6 text-white/90 text-xs font-sans uppercase tracking-[0.3em] [writing-mode:vertical-lr] drop-shadow-md">
-              NOOR ATELIER
-            </div>
 
-            {/* Subtle Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
 
             {/* Bottom floating tag pills */}
             <div className="absolute bottom-6 left-6 right-6 flex flex-wrap gap-2">
