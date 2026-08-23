@@ -36,10 +36,33 @@ export function mapFirestoreCategoryToGarmentCategory(
 }
 
 /**
+ * Helper to wrap any promise with a hard timeout and fallback result.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallbackValue: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => {
+      console.warn(`[Pipeline Timeout] Operation exceeded ${ms}ms limit — returning fallback.`);
+      resolve(fallbackValue);
+    }, ms);
+
+    promise
+      .then((val) => {
+        clearTimeout(timer);
+        resolve(val);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        console.warn(`[Pipeline Error] Operation failed:`, err);
+        resolve(fallbackValue);
+      });
+  });
+}
+
+/**
  * Uploads a clothing photo to the AI Pipeline:
- * 1. Invokes the processClothingUpload Cloud Function to call Gemini 2.5 Flash server-side.
+ * 1. Invokes the processClothingUpload Cloud Function to call Gemini 2.5 Flash server-side (6s timeout).
  * 2. Receives background-normalized image asset & category classification.
- * 3. Saves item in Firestore & Storage.
+ * 3. Saves item in Firestore & Storage with strict timeouts.
  * 4. Returns ready-to-render Garment object for the UI.
  */
 export async function uploadAndProcessClothingPhoto(
@@ -59,15 +82,23 @@ export async function uploadAndProcessClothingPhoto(
     }
   } else {
     mimeType = fileOrBase64.type || 'image/jpeg';
-    base64Data = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(fileOrBase64);
-    });
+    try {
+      base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(fileOrBase64);
+      });
+    } catch (e) {
+      console.warn('FileReader failed:', e);
+    }
   }
 
-  // Attempt Cloud Function call with strict 12s client timeout
+  // Fallback default image URL in case base64 conversion fails
+  const localBlobUrl = typeof fileOrBase64 !== 'string' ? URL.createObjectURL(fileOrBase64) : fileOrBase64;
+  const initialUrl = base64Data || localBlobUrl;
+
+  // 1. Attempt Cloud Function call with strict 6s timeout
   try {
     const processFn = httpsCallable<
       { imageBase64: string; mimeType: string; suggestedName?: string },
@@ -85,21 +116,17 @@ export async function uploadAndProcessClothingPhoto(
       }
     >(functions, 'processClothingUpload');
 
-    const timeoutMs = 12000;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Cloud Function execution timed out (12s limit)')), timeoutMs);
-    });
-
-    const res = await Promise.race([
+    const res = await withTimeout(
       processFn({
         imageBase64: base64Data,
         mimeType,
         suggestedName
       }),
-      timeoutPromise
-    ]);
+      6000, // 6 seconds timeout for Cloud Function
+      null
+    );
 
-    if (res.data && res.data.success && res.data.item) {
+    if (res && res.data && res.data.success && res.data.item) {
       const item = res.data.item;
       const mappedCategory = mapFirestoreCategoryToGarmentCategory(item.category, userGender);
 
@@ -126,31 +153,35 @@ export async function uploadAndProcessClothingPhoto(
     console.warn('Cloud Function unavailable or fallback mode active:', cloudErr);
   }
 
-  // Fallback Pipeline: Storage + Firestore client SDK
+  // 2. Fallback Pipeline: Storage (3s timeout) + Firestore (3s timeout)
   const itemId = `garment-${Date.now()}`;
-  let finalUrl = base64Data;
+  let finalUrl = initialUrl;
 
   if (typeof fileOrBase64 !== 'string') {
-    try {
-      finalUrl = await uploadClothingImage(fileOrBase64, userUid);
-    } catch (stErr) {
-      console.warn('Firebase Storage client upload fallback:', stErr);
-    }
+    finalUrl = await withTimeout(
+      uploadClothingImage(fileOrBase64, userUid),
+      3000, // 3 seconds timeout for Storage client upload
+      initialUrl
+    );
   }
 
   const defaultCategory: 'torso' = 'torso';
   const mappedCategory = mapFirestoreCategoryToGarmentCategory(defaultCategory, userGender);
 
-  // Write to Firestore
-  try {
-    await addClosetItem({
+  // Write to Firestore with 3s timeout
+  const firestoreDocId = await withTimeout(
+    addClosetItem({
       owner: userUid,
       category: defaultCategory,
       imageUrl: finalUrl,
       name: suggestedName || 'Wardrobe Piece'
-    });
-  } catch (fsErr) {
-    console.warn('Firestore addClosetItem fallback:', fsErr);
+    }),
+    3000, // 3 seconds timeout for Firestore document write
+    null
+  );
+
+  if (!firestoreDocId) {
+    throw new Error('Fallback Firestore write failed or timed out');
   }
 
   const garment: Garment = {

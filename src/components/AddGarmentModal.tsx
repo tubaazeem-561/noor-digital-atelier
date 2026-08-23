@@ -93,8 +93,18 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const processUploadedFile = async (file: File) => {
     setIsProcessing(true);
     setErrorMessage(null);
+
+    const masterTimeoutMs = 14000; // 14s ceiling (6s CF + 3s Storage + 3s Firestore + 2s buffer)
+    const masterTimeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Overall processing timed out (14s limit)')), masterTimeoutMs);
+    });
+
     try {
-      const result = await uploadAndProcessClothingPhoto(file, name || file.name, userUid, currentGender);
+      const result = await Promise.race([
+        uploadAndProcessClothingPhoto(file, name || file.name, userUid, currentGender),
+        masterTimeoutPromise
+      ]);
+
       setImage(result.imageUrl);
       setCategory(result.garment.category);
       if (result.garment.name && result.garment.name !== 'Uploaded Garment') {
@@ -102,8 +112,12 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       }
       setProcessedGarment(result.garment);
     } catch (err: any) {
-      console.error('Error processing upload:', err);
-      setErrorMessage('This is taking longer than expected — please try again or select a sample item below.');
+      console.warn('Upload pipeline timed out or fell back:', err);
+      // Instant local preview fallback using Blob URL
+      const localUrl = URL.createObjectURL(file);
+      setImage(localUrl);
+      setProcessedGarment(null);
+      setErrorMessage('Upload timed out — showing a temporary preview only. This item was not saved to your closet. Please try uploading again.');
     } finally {
       setIsProcessing(false);
     }
