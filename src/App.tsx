@@ -28,6 +28,7 @@ import {
   FirestoreSavedLookLayers
 } from './services/firestoreService';
 import { mapFirestoreCategoryToGarmentCategory } from './services/clothingPipelineService';
+import { mapCategoryToOutfitSlot } from './utils/categoryMapping';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomeScreen } from './components/HomeScreen';
@@ -369,14 +370,11 @@ export function App() {
     const layers: FirestoreSavedLookLayers = {};
     if (customLook.pieces && customLook.pieces.length > 0) {
       customLook.pieces.forEach((p) => {
-        if (p.category === 'tops' || p.category === 'shirts/t-shirts') layers.torso = p.id;
-        else if (p.category === 'bottoms') layers.bottoms = p.id;
-        else if (p.category === 'shoes') layers.feet = p.id;
-        else if (p.category === 'hijab') layers.hijab = p.id;
-        else if (p.category === 'accessories' || p.category === 'bags') {
+        const slot = mapCategoryToOutfitSlot(p.category);
+        if (slot === 'accessories') {
           layers.accessories = layers.accessories ? [...layers.accessories, p.id] : [p.id];
         } else {
-          layers[p.category] = p.id;
+          layers[slot] = p.id;
         }
       });
     }

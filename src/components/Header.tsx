@@ -69,16 +69,6 @@ export const Header: React.FC<HeaderProps> = ({
             Home
           </button>
           <button
-            onClick={() => onTabChange('photo')}
-            className={`font-sans text-xs uppercase tracking-widest transition-all py-1 border-b-2 cursor-pointer ${
-              activeTab === 'photo'
-                ? 'text-white border-white font-bold'
-                : 'text-white/75 border-transparent hover:text-white'
-            }`}
-          >
-            Silhouette
-          </button>
-          <button
             onClick={() => onTabChange('closet')}
             className={`font-sans text-xs uppercase tracking-widest transition-all py-1 border-b-2 cursor-pointer ${
               activeTab === 'closet'
@@ -177,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
         style={{ backgroundColor: mobileBg }}
         className="md:hidden flex items-center justify-around border-t border-white/15 px-2 py-2 text-white transition-colors duration-300"
       >
-        {(['home', 'photo', 'closet', 'style', 'saved'] as TabType[]).map((tab) => (
+        {(['home', 'closet', 'style', 'saved'] as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
@@ -187,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-white/80 hover:bg-white/10'
             }`}
           >
-            {tab === 'photo' ? 'Silhouette' : tab === 'saved' ? 'Archives' : tab}
+            {tab === 'saved' ? 'Archives' : tab}
           </button>
         ))}
       </div>

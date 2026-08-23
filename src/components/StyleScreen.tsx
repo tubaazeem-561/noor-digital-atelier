@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Garment, Look, UserSilhouette, StylingOccasionKey } from '../types';
+import {
+  OutfitSlot,
+  ActiveOutfit,
+  mapCategoryToOutfitSlot
+} from '../utils/categoryMapping';
+import { removeStudioBackground } from '../utils/imageProcessing';
+import { uploadBoardImage } from '../services/storageService';
+
+export interface LayerTransform {
+  x: number;
+  y: number;
+  scale: number;
+}
 
 interface StyleScreenProps {
   garments: Garment[];
@@ -70,6 +83,53 @@ const OCCASIONS: OccasionOption[] = [
   }
 ];
 
+// Flat-Color SVG Silhouette Placeholders for empty flat-lay slots
+const SlotPlaceholderSVG: React.FC<{ slot: OutfitSlot; className?: string }> = ({ slot, className = '' }) => {
+  switch (slot) {
+    case 'head':
+      return (
+        <svg viewBox="0 0 100 100" className={`w-full h-full text-[var(--theme-muted)]/40 ${className}`} fill="currentColor">
+          <ellipse cx="50" cy="35" rx="16" ry="20" opacity="0.35" />
+          <path d="M 34,32 C 34,18 66,18 66,32 C 66,42 34,42 34,32 Z" opacity="0.25" />
+        </svg>
+      );
+    case 'hijab':
+      return (
+        <svg viewBox="0 0 100 100" className={`w-full h-full text-[var(--theme-muted)]/40 ${className}`} fill="currentColor">
+          <path d="M 32,22 C 40,14 60,14 68,22 C 75,32 75,55 64,62 C 55,67 45,67 36,62 C 25,55 25,32 32,22 Z" opacity="0.3" />
+        </svg>
+      );
+    case 'torso':
+      return (
+        <svg viewBox="0 0 100 100" className={`w-full h-full text-[var(--theme-muted)]/40 ${className}`} fill="currentColor">
+          <path d="M 28,25 L 72,25 L 66,65 L 34,65 Z" opacity="0.35" />
+          <path d="M 28,25 L 18,40 L 28,45 Z" opacity="0.25" />
+          <path d="M 72,25 L 82,40 L 72,45 Z" opacity="0.25" />
+        </svg>
+      );
+    case 'bottoms':
+      return (
+        <svg viewBox="0 0 100 100" className={`w-full h-full text-[var(--theme-muted)]/40 ${className}`} fill="currentColor">
+          <path d="M 34,15 L 66,15 L 62,85 L 51,85 L 50,45 L 49,85 L 38,85 Z" opacity="0.35" />
+        </svg>
+      );
+    case 'feet':
+      return (
+        <svg viewBox="0 0 100 100" className={`w-full h-full text-[var(--theme-muted)]/40 ${className}`} fill="currentColor">
+          <ellipse cx="38" cy="65" rx="9" ry="16" opacity="0.35" />
+          <ellipse cx="62" cy="65" rx="9" ry="16" opacity="0.35" />
+        </svg>
+      );
+    case 'accessories':
+      return (
+        <svg viewBox="0 0 100 100" className={`w-full h-full text-[var(--theme-muted)]/40 ${className}`} fill="currentColor">
+          <circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.3" />
+          <path d="M 50,30 L 50,20 M 50,70 L 50,80 M 30,50 L 20,50 M 70,50 L 80,50" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+        </svg>
+      );
+  }
+};
+
 export const StyleScreen: React.FC<StyleScreenProps> = ({
   garments,
   userSilhouette,
@@ -89,31 +149,45 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [shuffleCount, setShuffleCount] = useState(0);
 
-  // Manual Studio Layers State
-  const [studioLayers, setStudioLayers] = useState<{
-    tops?: Garment;
-    bottoms?: Garment;
-    dresses?: Garment;
-    shoes?: Garment;
-    bags?: Garment;
-    accessories?: Garment;
-  }>(() => {
-    const initial: any = {};
+  // 2D Outfit Board Interaction State
+  const [layerTransforms, setLayerTransforms] = useState<Record<string, LayerTransform>>({});
+  const [dragState, setDragState] = useState<{
+    slot: OutfitSlot | null;
+    startX: number;
+    startY: number;
+    initialTransform: LayerTransform | null;
+  }>({ slot: null, startX: 0, startY: 0, initialTransform: null });
+  const [isCapturing, setIsCapturing] = useState(false);
+  const boardRef = React.useRef<HTMLDivElement>(null);
+
+  // Core Active Outfit State (head, hijab, torso, bottoms, feet, accessories)
+  const [activeOutfit, setActiveOutfit] = useState<ActiveOutfit>(() => {
+    const initial: ActiveOutfit = {};
     initialSelectedIds.forEach((id) => {
       const g = garments.find((item) => item.id === id);
       if (g && !g.isArchived) {
-        if (g.category === 'tops') initial.tops = g;
-        else if (g.category === 'bottoms') initial.bottoms = g;
-        else if (g.category === 'dresses') initial.dresses = g;
-        else if (g.category === 'shoes') initial.shoes = g;
-        else if (g.category === 'bags') initial.bags = g;
-        else if (g.category === 'accessories') initial.accessories = g;
+        const slot = mapCategoryToOutfitSlot(g.category);
+        initial[slot] = g;
       }
     });
     return initial;
   });
 
   const [studioFilter, setStudioFilter] = useState<'all' | 'tops' | 'bottoms' | 'dresses' | 'shoes' | 'bags' | 'accessories'>('all');
+
+  // Process item images through background thresholding so they render as isolated cutouts on pure white canvas
+  const [processedCutouts, setProcessedCutouts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    (Object.values(activeOutfit) as (Garment | undefined)[]).forEach((item) => {
+      if (item && item.image && !processedCutouts[item.id]) {
+        const itemId = item.id;
+        removeStudioBackground(item.image).then((cleaned) => {
+          setProcessedCutouts((prev) => ({ ...prev, [itemId]: cleaned }));
+        });
+      }
+    });
+  }, [activeOutfit]);
 
   // Filter out any archived garments: NOOR strictly uses active unarchived clothes
   const activeCloset = garments.filter((g) => !g.isArchived);
@@ -182,7 +256,7 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
         selectedPieces.push(accessories[accIndex]);
       }
 
-      // If we could not put together at least 2 distinct pieces, fail gracefully with the requested fallback
+      // If we could not put together at least 2 distinct pieces, fail gracefully
       if (selectedPieces.length < 2) {
         setCannotCompleteOutfit(true);
         setGeneratedResultLook(null);
@@ -228,30 +302,39 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
     synthesizeLookForOccasion(selectedOccasion, nextShuffle);
   };
 
-  // Studio Layer helpers
+  // Track broken/failed image loads per slot
+  const [failedSlotImages, setFailedSlotImages] = useState<Record<string, boolean>>({});
+
+  // Studio Outfit Layering: Swaps slot, or deselects if clicking already active item
   const handleAssignStudioPiece = (garment: Garment) => {
-    setStudioLayers((prev) => {
-      const updated = { ...prev };
-      if (garment.category === 'tops') updated.tops = garment;
-      else if (garment.category === 'bottoms') updated.bottoms = garment;
-      else if (garment.category === 'dresses') updated.dresses = garment;
-      else if (garment.category === 'shoes') updated.shoes = garment;
-      else if (garment.category === 'bags') updated.bags = garment;
-      else if (garment.category === 'accessories') updated.accessories = garment;
-      return updated;
+    const slot = mapCategoryToOutfitSlot(garment.category);
+    // Reset failed image flag for this slot on new item selection
+    setFailedSlotImages((prev) => ({ ...prev, [slot]: false }));
+
+    setActiveOutfit((prev) => {
+      if (prev[slot]?.id === garment.id) {
+        const updated = { ...prev };
+        delete updated[slot];
+        return updated;
+      }
+      return {
+        ...prev,
+        [slot]: garment
+      };
     });
   };
 
-  const handleRemoveStudioLayer = (cat: keyof typeof studioLayers) => {
-    setStudioLayers((prev) => {
+  const handleRemoveStudioLayer = (slot: OutfitSlot) => {
+    setFailedSlotImages((prev) => ({ ...prev, [slot]: false }));
+    setActiveOutfit((prev) => {
       const updated = { ...prev };
-      delete updated[cat];
+      delete updated[slot];
       return updated;
     });
   };
 
   const handleSaveStudioLook = () => {
-    const pieces = Object.values(studioLayers).filter(Boolean) as Garment[];
+    const pieces = Object.values(activeOutfit).filter(Boolean) as Garment[];
     if (pieces.length === 0) {
       alert('Please select at least one piece from your closet.');
       return;
@@ -277,6 +360,240 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
     onGenerateCustomLook(newLook);
     onViewLookDetail(newLook);
   };
+
+  // Drag and Scale Handlers
+  const handlePointerDown = (e: React.PointerEvent, slot: OutfitSlot) => {
+    e.preventDefault();
+    // Only capture left click
+    if (e.button !== 0) return;
+    const transform = layerTransforms[slot] || { x: 0, y: 0, scale: 1 };
+    setDragState({
+      slot,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialTransform: { ...transform }
+    });
+    // Set pointer capture to the target so we can track moves outside the element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragState.slot || !dragState.initialTransform) return;
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    setLayerTransforms((prev) => ({
+      ...prev,
+      [dragState.slot!]: {
+        ...dragState.initialTransform!,
+        x: dragState.initialTransform!.x + dx,
+        y: dragState.initialTransform!.y + dy
+      }
+    }));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (dragState.slot) {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    }
+    setDragState({ slot: null, startX: 0, startY: 0, initialTransform: null });
+  };
+
+  const handleWheel = (e: React.WheelEvent, slot: OutfitSlot) => {
+    // Only allow wheel scale if there is an item
+    if (!activeOutfit[slot]) return;
+    e.preventDefault();
+    setLayerTransforms((prev) => {
+      const current = prev[slot] || { x: 0, y: 0, scale: 1 };
+      const newScale = Math.max(0.3, Math.min(3, current.scale - e.deltaY * 0.005));
+      return { ...prev, [slot]: { ...current, scale: newScale } };
+    });
+  };
+
+  const handleSaveBoard = async () => {
+    if (!boardRef.current) return;
+    
+    const pieces = Object.values(activeOutfit).filter(Boolean) as Garment[];
+    if (pieces.length === 0) {
+      alert('Please select at least one piece from your closet to save the board.');
+      return;
+    }
+
+    setIsCapturing(true);
+    try {
+      const canvas = document.createElement('canvas');
+      const rect = boardRef.current.getBoundingClientRect();
+      canvas.width = 1000;
+      canvas.height = (rect.height / rect.width) * 1000;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Draw white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      const scaleFactor = canvas.width / rect.width;
+
+      // Draw layers honoring z-index by iterating in order
+      const sortedConfigs = [...FLAT_LAY_CONFIG].sort((a, b) => a.zIndex - b.zIndex);
+      
+      for (const config of sortedConfigs) {
+        const item = activeOutfit[config.slot];
+        if (!item || failedSlotImages[config.slot]) continue;
+        
+        const imgSrc = processedCutouts[item.id] || item.image;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imgSrc;
+        
+        await new Promise<void>((res) => { 
+          img.onload = () => res(); 
+          img.onerror = () => res(); 
+        });
+        
+        const t = layerTransforms[config.slot] || { x: 0, y: 0, scale: 1 };
+        const isDressWorn = activeOutfit.torso?.category === 'dresses';
+        const wPct = parseFloat(config.width) / 100;
+        const hPct = parseFloat(config.height(isDressWorn)) / 100;
+        const topPct = parseFloat(config.top) / 100;
+        const leftPct = parseFloat(config.left) / 100;
+        
+        const dw = canvas.width * wPct;
+        const dh = canvas.height * hPct;
+        
+        const dx = leftPct * canvas.width + t.x * scaleFactor;
+        const dy = topPct * canvas.height + t.y * scaleFactor;
+        
+        const cx = dx + dw / 2;
+        const cy = dy + dh / 2;
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(t.scale, t.scale);
+        // Using 'multiply' here in case background removal wasn't 100% perfect, matching CSS
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        ctx.restore();
+      }
+
+      // Upload the generated canvas to Storage
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+      if (!blob) throw new Error('Failed to generate image blob');
+      
+      // Assuming a generic user ID for now since auth might be mocked, wait... we don't have userId here.
+      // But we can generate a random one if needed, or pass it down. 
+      // Actually `saveLookToFirestore` in `App.tsx` handles the user context. Let's just create the Look 
+      // and use the uploaded URL. But `uploadBoardImage` needs `userId`.
+      // The current app stores it in `localStorage` or we can use a dummy for the test. Let's use 'user_local'
+      const activeUserId = localStorage.getItem('noor_atelier_active_user_id_v3') || 'user_local';
+      
+      const imageUrl = await uploadBoardImage(blob, activeUserId);
+
+      // Create new look record
+      const ensembleNumber = `Board ${Math.floor(Math.random() * 900 + 100)}`;
+      const newLook: Look = {
+        id: `look-board-${Date.now()}`,
+        ensembleNumber,
+        title: `2D Outfit Board`,
+        subtitle: pieces.map((p) => p.name).join(' • '),
+        occasion: 'Custom Board',
+        vibe: 'Curated Flat-lay',
+        description: `An interactive outfit composition assembled directly from your closet pieces.`,
+        image: imageUrl,
+        aspectRatio: 'tall',
+        pieces,
+        tags: ['2D Board', 'Personal Wardrobe'],
+        isSaved: true,
+        edition: 'Bespoke Studio'
+      };
+
+      onGenerateCustomLook(newLook);
+      onViewLookDetail(newLook);
+
+    } catch (err) {
+      console.error('Failed to capture and save board:', err);
+      alert('Could not save the board. Please try again.');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  /**
+   * Editorial Flat-Lay Spatial Layout Configuration
+   * Arranges active cutouts in a clean, overlapping flat-lay collage style.
+   */
+  const FLAT_LAY_CONFIG: {
+    slot: OutfitSlot;
+    label: string;
+    zIndex: number;
+    top: string;
+    left: string;
+    width: string;
+    height: (isDressWorn?: boolean) => string;
+    alignClass: string;
+  }[] = [
+    {
+      slot: 'head',
+      label: 'Headwear',
+      zIndex: 10,
+      top: '2%',
+      left: '30%',
+      width: '40%',
+      height: () => '24%',
+      alignClass: 'object-contain object-center'
+    },
+    {
+      slot: 'hijab',
+      label: 'Hijab',
+      zIndex: 15,
+      top: '0%',
+      left: '22%',
+      width: '56%',
+      height: () => '36%',
+      alignClass: 'object-contain object-top'
+    },
+    {
+      slot: 'torso',
+      label: 'Top / Dress',
+      zIndex: 30,
+      top: '10%',
+      left: '18%',
+      width: '64%',
+      height: (isDressWorn) => (isDressWorn ? '68%' : '50%'),
+      alignClass: 'object-contain object-top'
+    },
+    {
+      slot: 'bottoms',
+      label: 'Bottoms',
+      zIndex: 20,
+      top: '38%',
+      left: '24%',
+      width: '52%',
+      height: () => '46%',
+      alignClass: 'object-contain object-top'
+    },
+    {
+      slot: 'feet',
+      label: 'Shoes',
+      zIndex: 40,
+      top: '72%',
+      left: '54%',
+      width: '36%',
+      height: () => '24%',
+      alignClass: 'object-contain object-bottom'
+    },
+    {
+      slot: 'accessories',
+      label: 'Bag / Accessories',
+      zIndex: 50,
+      top: '58%',
+      left: '8%',
+      width: '34%',
+      height: () => '28%',
+      alignClass: 'object-contain object-center'
+    }
+  ];
+
+  const activeSlotCount = Object.values(activeOutfit).filter(Boolean).length;
 
   return (
     <div className="space-y-10 pb-16 animate-fadeIn">
@@ -406,9 +723,6 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
               </p>
             </div>
           ) : cannotCompleteOutfit ? (
-            /* ----------------------------------------------------------- */
-            /* FALLBACK STATE FOR INCOMPLETE OUTFITS                       */
-            /* ----------------------------------------------------------- */
             <div className="max-w-lg mx-auto p-8 sm:p-12 text-center bg-[var(--theme-surface)] rounded-3xl border border-[var(--theme-border)] shadow-[var(--theme-shadow-md)] space-y-6">
               <div className="w-20 h-20 rounded-full bg-[var(--theme-surface-subtle)] text-[var(--theme-primary)] mx-auto flex items-center justify-center border border-[var(--theme-border)]">
                 <span className="material-symbols-outlined text-4xl">checkroom</span>
@@ -443,12 +757,8 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
               </div>
             </div>
           ) : (
-            /* ----------------------------------------------------------- */
-            /* SUCCESS STATE: COMPLETE LOOK SYNTHESIZED FROM USER CLOSET   */
-            /* ----------------------------------------------------------- */
             generatedResultLook && (
               <div className="space-y-8">
-                {/* Result Title & Confidence Affirmation */}
                 <div className="text-center max-w-2xl mx-auto space-y-3">
                   <span className="inline-flex items-center gap-2 px-3.5 py-1 bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-primary)] rounded-full text-xs font-sans uppercase tracking-widest font-semibold shadow-[var(--theme-shadow-sm)]">
                     <span className="material-symbols-outlined text-sm">auto_awesome</span>
@@ -468,7 +778,6 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
                   </p>
                 </div>
 
-                {/* Garments Visual Grid: Large, attractive cards showing uploaded clothes */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-serif text-xl text-[var(--theme-heading)]">
@@ -509,7 +818,6 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Styling Note Banner */}
                 {generatedResultLook.stylingNotes && (
                   <div className="p-5 bg-[var(--theme-surface)] rounded-2xl border border-[var(--theme-border)] flex items-start gap-3 shadow-[var(--theme-shadow-sm)]">
                     <span className="material-symbols-outlined text-[var(--theme-primary)] text-xl shrink-0 mt-0.5">
@@ -526,7 +834,6 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
                   </div>
                 )}
 
-                {/* Action CTA Bar */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 border-t border-[var(--theme-border)]">
                   <button
                     onClick={() => {
@@ -564,7 +871,7 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* VIEW 3: PIECE-BY-PIECE STUDIO CANVAS (OPTIONAL MANUAL MODE)   */}
+      {/* VIEW 3: EDITORIAL FLAT-LAY OUTFIT COLLAGE STUDIO CANVAS      */}
       {/* ------------------------------------------------------------- */}
       {activeMode === 'studio' && (
         <div className="space-y-8 animate-fadeIn">
@@ -579,205 +886,188 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
 
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[var(--theme-surface)] border border-[var(--theme-border)] text-[var(--theme-primary)] rounded-full text-xs font-sans uppercase tracking-widest font-semibold shadow-[var(--theme-shadow-sm)]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent)]"></span>
-              Studio Canvas
+              Flat-Lay Studio Canvas
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Mannequin / Canvas Layer Stack */}
+            {/* Flat-Lay Outfit Collage & Layer Inspector */}
             <div className="lg:col-span-5 space-y-4">
-              <div className="bg-[var(--theme-surface)] rounded-3xl p-6 border border-[var(--theme-border)] shadow-[var(--theme-shadow-sm)] space-y-4">
+              <div className="bg-[var(--theme-surface)] rounded-3xl p-6 border border-[var(--theme-border)] shadow-[var(--theme-shadow-sm)] space-y-5">
                 <div className="flex justify-between items-center">
                   <span className="font-sans text-xs uppercase tracking-widest text-[var(--theme-primary)] font-semibold">
-                    Current Ensemble
+                    Flat-Lay Outfit Collage
                   </span>
-                  <span className="text-xs font-mono text-[var(--theme-primary)] bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] px-2.5 py-0.5 rounded-full">
-                    {Object.values(studioLayers).filter(Boolean).length} Layers Selected
+                  <span className="text-xs font-mono text-[var(--theme-primary)] bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] px-2.5 py-0.5 rounded-full font-semibold">
+                    {activeSlotCount} / 6 Layers Active
                   </span>
                 </div>
 
-                {/* Layered Visual Display */}
-                <div className="relative aspect-[3/4] bg-[var(--theme-surface-subtle)] rounded-2xl overflow-hidden border border-[var(--theme-border)] shadow-inner flex flex-col justify-center items-center p-4">
-                  <img
-                    src={userSilhouette.photoUrl}
-                    alt="Mannequin Silhouette"
-                    className="absolute inset-0 w-full h-full object-cover object-top opacity-25 blur-[1px]"
-                  />
+                {/* 
+                  EDITORIAL FLAT-LAY OUTFIT COLLAGE CANVAS
+                  Interactive 2D Board for dragging, scaling and composing.
+                */}
+                <div 
+                  ref={boardRef}
+                  className="relative aspect-[3/4] bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center p-4 touch-none"
+                >
+                  {/* Pure Clean White Canvas Background (Match Image 2) */}
+                  <div className="absolute inset-0 bg-white pointer-events-none" />
 
-                  <div className="relative z-10 w-full h-full flex flex-col justify-between gap-2 overflow-y-auto py-2">
-                    {studioLayers.dresses && (
-                      <div className="relative p-2.5 bg-[var(--theme-surface)]/95 backdrop-blur-md rounded-xl border border-[var(--theme-border)] flex items-center gap-3 shadow-[var(--theme-shadow-sm)]">
-                        <img
-                          src={studioLayers.dresses.image}
-                          alt={studioLayers.dresses.name}
-                          className="w-12 h-14 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-sans text-[var(--theme-primary)] uppercase tracking-wider font-semibold block">
-                            Dress
-                          </span>
-                          <p className="text-xs font-serif text-[var(--theme-heading)] truncate">
-                            {studioLayers.dresses.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveStudioLayer('dresses')}
-                          className="text-[var(--theme-muted)] hover:text-rose-700 p-1 cursor-pointer"
+                  {/* Overlapping Flat-Lay Layers */}
+                  <div className="relative w-full h-full inset-0">
+                    {FLAT_LAY_CONFIG.map((config) => {
+                      const { slot, zIndex, top, left, width, height, alignClass } = config;
+                      const item = activeOutfit[slot];
+                      const isDressWorn = activeOutfit.torso?.category === 'dresses';
+                      const hasValidImage = Boolean(
+                        item && item.image && item.image.trim() !== '' && !failedSlotImages[slot]
+                      );
+                      const isPlaceholderSuppressed = slot === 'bottoms' && !activeOutfit.bottoms && isDressWorn;
+                      const currentHeight = height(isDressWorn);
+                      const cutoutImage = item ? (processedCutouts[item.id] || item.image) : '';
+
+                      const t = layerTransforms[slot] || { x: 0, y: 0, scale: 1 };
+                      
+                      // Using inline transform for drag and scale
+                      const transformStyle = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
+
+                      return (
+                        <div
+                          key={slot}
+                          style={{
+                            zIndex,
+                            top,
+                            left,
+                            width,
+                            height: currentHeight,
+                            transform: transformStyle
+                          }}
+                          className="absolute flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+                          onPointerDown={(e) => hasValidImage && handlePointerDown(e, slot)}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={handlePointerUp}
+                          onPointerCancel={handlePointerUp}
+                          onWheel={(e) => hasValidImage && handleWheel(e, slot)}
                         >
-                          <span className="material-symbols-outlined text-sm">close</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {studioLayers.tops && (
-                      <div className="relative p-2.5 bg-[var(--theme-surface)]/95 backdrop-blur-md rounded-xl border border-[var(--theme-border)] flex items-center gap-3 shadow-[var(--theme-shadow-sm)]">
-                        <img
-                          src={studioLayers.tops.image}
-                          alt={studioLayers.tops.name}
-                          className="w-12 h-14 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-sans text-[var(--theme-primary)] uppercase tracking-wider font-semibold block">
-                            Top
-                          </span>
-                          <p className="text-xs font-serif text-[var(--theme-heading)] truncate">
-                            {studioLayers.tops.name}
-                          </p>
+                          {hasValidImage ? (
+                            <div className="relative w-full h-full">
+                              <img
+                                src={cutoutImage}
+                                alt={item!.name}
+                                draggable={false} // prevent default browser drag
+                                onError={() => setFailedSlotImages((prev) => ({ ...prev, [slot]: true }))}
+                                style={{ mixBlendMode: 'multiply' }}
+                                className={`w-full h-full ${alignClass} filter contrast-[1.03] transition-all duration-300 hover:drop-shadow-lg`}
+                              />
+                              {/* Remove Layer Button on hover/active */}
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleRemoveStudioLayer(slot); }}
+                                className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity z-50 pointer-events-auto cursor-pointer"
+                                title="Remove Item"
+                              >
+                                <span className="material-symbols-outlined text-xs block">close</span>
+                              </button>
+                            </div>
+                          ) : !isPlaceholderSuppressed ? (
+                            <div className="w-12 h-12 opacity-15 flex items-center justify-center pointer-events-none border border-dashed border-gray-300 rounded-full p-2">
+                              <SlotPlaceholderSVG slot={slot} />
+                            </div>
+                          ) : null}
                         </div>
-                        <button
-                          onClick={() => handleRemoveStudioLayer('tops')}
-                          className="text-[var(--theme-muted)] hover:text-rose-700 p-1 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">close</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {studioLayers.bottoms && (
-                      <div className="relative p-2.5 bg-[var(--theme-surface)]/95 backdrop-blur-md rounded-xl border border-[var(--theme-border)] flex items-center gap-3 shadow-[var(--theme-shadow-sm)]">
-                        <img
-                          src={studioLayers.bottoms.image}
-                          alt={studioLayers.bottoms.name}
-                          className="w-12 h-14 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-sans text-[var(--theme-primary)] uppercase tracking-wider font-semibold block">
-                            Bottom
-                          </span>
-                          <p className="text-xs font-serif text-[var(--theme-heading)] truncate">
-                            {studioLayers.bottoms.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveStudioLayer('bottoms')}
-                          className="text-[var(--theme-muted)] hover:text-rose-700 p-1 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">close</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {studioLayers.shoes && (
-                      <div className="relative p-2.5 bg-[var(--theme-surface)]/95 backdrop-blur-md rounded-xl border border-[var(--theme-border)] flex items-center gap-3 shadow-[var(--theme-shadow-sm)]">
-                        <img
-                          src={studioLayers.shoes.image}
-                          alt={studioLayers.shoes.name}
-                          className="w-12 h-14 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-sans text-[var(--theme-primary)] uppercase tracking-wider font-semibold block">
-                            Shoes
-                          </span>
-                          <p className="text-xs font-serif text-[var(--theme-heading)] truncate">
-                            {studioLayers.shoes.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveStudioLayer('shoes')}
-                          className="text-[var(--theme-muted)] hover:text-rose-700 p-1 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">close</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {studioLayers.bags && (
-                      <div className="relative p-2.5 bg-[var(--theme-surface)]/95 backdrop-blur-md rounded-xl border border-[var(--theme-border)] flex items-center gap-3 shadow-[var(--theme-shadow-sm)]">
-                        <img
-                          src={studioLayers.bags.image}
-                          alt={studioLayers.bags.name}
-                          className="w-12 h-14 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-sans text-[var(--theme-primary)] uppercase tracking-wider font-semibold block">
-                            Bag
-                          </span>
-                          <p className="text-xs font-serif text-[var(--theme-heading)] truncate">
-                            {studioLayers.bags.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveStudioLayer('bags')}
-                          className="text-[var(--theme-muted)] hover:text-rose-700 p-1 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">close</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {studioLayers.accessories && (
-                      <div className="relative p-2.5 bg-[var(--theme-surface)]/95 backdrop-blur-md rounded-xl border border-[var(--theme-border)] flex items-center gap-3 shadow-[var(--theme-shadow-sm)]">
-                        <img
-                          src={studioLayers.accessories.image}
-                          alt={studioLayers.accessories.name}
-                          className="w-12 h-14 object-cover rounded-md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-sans text-[var(--theme-primary)] uppercase tracking-wider font-semibold block">
-                            Accessory
-                          </span>
-                          <p className="text-xs font-serif text-[var(--theme-heading)] truncate">
-                            {studioLayers.accessories.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveStudioLayer('accessories')}
-                          className="text-[var(--theme-muted)] hover:text-rose-700 p-1 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">close</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {Object.values(studioLayers).filter(Boolean).length === 0 && (
-                      <div className="text-center p-6 space-y-2">
-                        <span className="material-symbols-outlined text-4xl text-[var(--theme-muted)]">
-                          drag_indicator
-                        </span>
-                        <p className="font-serif text-sm text-[var(--theme-heading)]">
-                          Select clothes from your wardrobe on the right to layer this look.
-                        </p>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
 
-                <button
-                  onClick={handleSaveStudioLook}
-                  className="w-full py-3.5 bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-hover)] text-[var(--theme-primary-text)] rounded-full font-serif text-base transition-all shadow-[var(--theme-shadow-sm)] flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-sm">auto_awesome</span>
-                  <span>Save Look</span>
-                </button>
+                {/* Active Layer Inspector Control Strip */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-[var(--theme-muted)] font-semibold block">
+                    Collage Garments:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {FLAT_LAY_CONFIG.map(({ slot, label }) => {
+                      const item = activeOutfit[slot];
+                      return (
+                        <div
+                          key={slot}
+                          className={`p-2 rounded-xl border text-xs font-sans flex items-center justify-between gap-1.5 transition-all ${
+                            item
+                              ? 'bg-[var(--theme-surface-subtle)] border-[var(--theme-primary)] text-[var(--theme-heading)] shadow-[var(--theme-shadow-xs)]'
+                              : 'bg-[var(--theme-surface)] border-[var(--theme-border)] text-[var(--theme-muted)]'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--theme-primary)] block truncate">
+                              {label}
+                            </span>
+                            <span className="text-[11px] font-serif text-[var(--theme-heading)] block truncate">
+                              {item ? item.name : 'Empty Slot'}
+                            </span>
+                          </div>
+
+                          {item && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStudioLayer(slot)}
+                              className="text-[var(--theme-muted)] hover:text-rose-700 p-0.5 rounded cursor-pointer"
+                              title={`Clear ${label}`}
+                            >
+                              <span className="material-symbols-outlined text-xs">close</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setLayerTransforms({})}
+                    className="w-full py-3.5 rounded-full font-serif text-sm transition-all bg-[var(--theme-surface-subtle)] hover:bg-[var(--theme-surface)] text-[var(--theme-heading)] border border-[var(--theme-border)] shadow-[var(--theme-shadow-sm)] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">refresh</span>
+                    <span>Reset Layout</span>
+                  </button>
+
+                  <button
+                    onClick={handleSaveBoard}
+                    disabled={activeSlotCount === 0 || isCapturing}
+                    className={`w-full py-3.5 rounded-full font-serif text-sm transition-all shadow-[var(--theme-shadow-sm)] flex items-center justify-center gap-2 cursor-pointer ${
+                      activeSlotCount > 0 && !isCapturing
+                        ? 'bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-hover)] text-[var(--theme-primary-text)]'
+                        : 'bg-[var(--theme-surface-subtle)] border border-[var(--theme-border)] text-[var(--theme-muted)] cursor-not-allowed'
+                    }`}
+                  >
+                    {isCapturing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                        <span>Save Board</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Closet Wardrobe Selector */}
             <div className="lg:col-span-7 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-serif text-2xl text-[var(--theme-heading)]">
-                  Your Closet Pieces
-                </h3>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h3 className="font-serif text-2xl text-[var(--theme-heading)]">
+                    Your Wardrobe
+                  </h3>
+                  <p className="font-sans text-xs text-[var(--theme-body)]">
+                    Click items to layer into your flat-lay collage outfit.
+                  </p>
+                </div>
 
                 <div className="flex gap-1.5 overflow-x-auto pb-1">
                   {(['all', 'tops', 'bottoms', 'dresses', 'shoes', 'bags', 'accessories'] as const).map((cat) => (
@@ -796,14 +1086,13 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
                 </div>
               </div>
 
-              {/* Grid of active clothes */}
+              {/* Grid of active wardrobe items from Firestore */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[580px] overflow-y-auto pr-1">
                 {activeCloset
                   .filter((g) => studioFilter === 'all' || g.category === studioFilter)
                   .map((garment) => {
-                    const isLayered = (Object.values(studioLayers) as (Garment | undefined)[]).some(
-                      (l) => l?.id === garment.id
-                    );
+                    const slot = mapCategoryToOutfitSlot(garment.category);
+                    const isLayered = activeOutfit[slot]?.id === garment.id;
 
                     return (
                       <div
@@ -811,7 +1100,7 @@ export const StyleScreen: React.FC<StyleScreenProps> = ({
                         onClick={() => handleAssignStudioPiece(garment)}
                         className={`p-3 rounded-2xl bg-[var(--theme-surface)] border cursor-pointer transition-all duration-200 flex flex-col justify-between ${
                           isLayered
-                            ? 'border-[var(--theme-primary)] bg-[var(--theme-surface-subtle)] ring-2 ring-[var(--theme-primary)]/40'
+                            ? 'border-[var(--theme-primary)] bg-[var(--theme-surface-subtle)] ring-2 ring-[var(--theme-primary)]/40 shadow-[var(--theme-shadow-sm)]'
                             : 'border-[var(--theme-border)] hover:border-[var(--theme-border-hover)] hover:shadow-[var(--theme-shadow-sm)]'
                         }`}
                       >

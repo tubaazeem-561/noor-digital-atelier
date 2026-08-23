@@ -3,6 +3,7 @@ import { functions } from './firebase';
 import { addClosetItem } from './firestoreService';
 import { uploadClothingImage } from './storageService';
 import { Garment, GarmentCategory } from '../types';
+import { removeStudioBackground } from '../utils/imageProcessing';
 
 export interface ProcessedClothingResult {
   garment: Garment;
@@ -94,11 +95,20 @@ export async function uploadAndProcessClothingPhoto(
     }
   }
 
+  // Process base64 photo to produce transparent studio cutout
+  if (base64Data) {
+    try {
+      base64Data = await removeStudioBackground(base64Data);
+    } catch (bgErr) {
+      console.warn('Transparent cutout processing fallback:', bgErr);
+    }
+  }
+
   // Fallback default image URL in case base64 conversion fails
   const localBlobUrl = typeof fileOrBase64 !== 'string' ? URL.createObjectURL(fileOrBase64) : fileOrBase64;
   const initialUrl = base64Data || localBlobUrl;
 
-  // 1. Attempt Cloud Function call with strict 6s timeout
+  // 1. Attempt Cloud Function call with 12s timeout
   try {
     const processFn = httpsCallable<
       { imageBase64: string; mimeType: string; suggestedName?: string },
@@ -119,10 +129,10 @@ export async function uploadAndProcessClothingPhoto(
     const res = await withTimeout(
       processFn({
         imageBase64: base64Data,
-        mimeType,
+        mimeType: 'image/png',
         suggestedName
       }),
-      6000, // 6 seconds timeout for Cloud Function
+      20000, // 20 seconds timeout for Cloud Function
       null
     );
 

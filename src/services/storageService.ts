@@ -30,3 +30,16 @@ export async function uploadAvatarImage(file: File, userId: string): Promise<str
   const downloadUrl = await getDownloadURL(snapshot.ref);
   return downloadUrl;
 }
+
+/**
+ * Uploads a generated outfit board image to Firebase Storage under `users/{userId}/boards/{filename}`
+ * and returns the public download URL.
+ */
+export async function uploadBoardImage(file: Blob, userId: string): Promise<string> {
+  const filename = `board_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+  const storageRef = ref(storage, `users/${userId}/boards/${filename}`);
+  
+  const snapshot = await uploadBytes(storageRef, file);
+  const downloadUrl = await getDownloadURL(snapshot.ref);
+  return downloadUrl;
+}

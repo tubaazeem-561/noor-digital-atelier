@@ -178,7 +178,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Build Masterpieces
             </h3>
             <p className="text-xs text-[var(--theme-body)] mt-2 font-sans leading-relaxed">
-              Layer silhouettes and test harmonic proportions on your digital mannequin.
+              Layer clothes and assemble flat-lay outfit collages from your wardrobe.
             </p>
           </div>
         </div>
