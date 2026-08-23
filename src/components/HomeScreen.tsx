@@ -74,34 +74,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </span>
             </div>
 
-            {/* Rich Fashion Rack & Drape SVG Illustration */}
-            <div className="relative z-10 flex items-center justify-center my-auto py-2">
-              <svg className="w-52 h-36 mx-auto text-[var(--theme-primary)]" viewBox="0 0 200 130" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Rack Frame */}
-                <path d="M 20 120 L 20 20 C 20 15, 180 15, 180 20 L 180 120" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
-                <path d="M 12 120 L 28 120 M 172 120 L 188 120" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
-                
-                {/* Hanger Loops */}
-                <path d="M 55 20 C 55 16, 52 14, 50 16 C 48 18, 50 20, 55 22 L 35 32 L 75 32 Z" fill="currentColor" opacity="0.25" />
-                <path d="M 105 20 C 105 16, 102 14, 100 16 C 98 18, 100 20, 105 22 L 85 32 L 125 32 Z" fill="currentColor" opacity="0.25" />
-                <path d="M 155 20 C 155 16, 152 14, 150 16 C 148 18, 150 20, 155 22 L 135 32 L 175 32 Z" fill="currentColor" opacity="0.25" />
-                
-                {/* Garment 1: Trench Coat (Left) */}
-                <path d="M 35 32 Q 28 50 30 100 L 70 100 Q 72 50 65 32 Z" fill="var(--theme-accent)" opacity="0.2" />
-                <path d="M 35 32 L 48 50 L 48 100 M 65 32 L 52 50 L 52 100 M 42 32 L 50 42 L 58 32" stroke="currentColor" strokeWidth="1.2" opacity="0.5" strokeLinecap="round" />
+            {/* Hero Graphic Illustration (Image for Women theme preset, SVG for others) */}
+            <div className="relative z-10 flex items-center justify-center my-auto py-2 h-36">
+              {currentPreset.heroGraphicImage ? (
+                <img
+                  src={currentPreset.heroGraphicImage}
+                  alt={`${currentPreset.name} Hero Graphic`}
+                  className="max-h-36 w-auto object-contain rounded-2xl border border-[var(--theme-border)] shadow-[var(--theme-shadow-sm)] opacity-95 transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+              ) : (
+                <svg className="w-52 h-36 mx-auto text-[var(--theme-primary)]" viewBox="0 0 200 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Rack Frame */}
+                  <path d="M 20 120 L 20 20 C 20 15, 180 15, 180 20 L 180 120" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
+                  <path d="M 12 120 L 28 120 M 172 120 L 188 120" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
+                  
+                  {/* Hanger Loops */}
+                  <path d="M 55 20 C 55 16, 52 14, 50 16 C 48 18, 50 20, 55 22 L 35 32 L 75 32 Z" fill="currentColor" opacity="0.25" />
+                  <path d="M 105 20 C 105 16, 102 14, 100 16 C 98 18, 100 20, 105 22 L 85 32 L 125 32 Z" fill="currentColor" opacity="0.25" />
+                  <path d="M 155 20 C 155 16, 152 14, 150 16 C 148 18, 150 20, 155 22 L 135 32 L 175 32 Z" fill="currentColor" opacity="0.25" />
+                  
+                  {/* Garment 1: Trench Coat (Left) */}
+                  <path d="M 35 32 Q 28 50 30 100 L 70 100 Q 72 50 65 32 Z" fill="var(--theme-accent)" opacity="0.2" />
+                  <path d="M 35 32 L 48 50 L 48 100 M 65 32 L 52 50 L 52 100 M 42 32 L 50 42 L 58 32" stroke="currentColor" strokeWidth="1.2" opacity="0.5" strokeLinecap="round" />
 
-                {/* Garment 2: Fluid Silk Dress (Center) */}
-                <path d="M 88 32 C 82 45, 80 75, 78 110 L 122 110 C 120 75, 118 45, 112 32 Z" fill="var(--theme-primary)" opacity="0.18" />
-                <path d="M 88 32 Q 100 45 112 32 M 95 32 C 92 60 90 90 88 110 M 105 32 C 108 60 110 90 112 110" stroke="currentColor" strokeWidth="1.2" opacity="0.45" strokeLinecap="round" />
+                  {/* Garment 2: Fluid Silk Dress (Center) */}
+                  <path d="M 88 32 C 82 45, 80 75, 78 110 L 122 110 C 120 75, 118 45, 112 32 Z" fill="var(--theme-primary)" opacity="0.18" />
+                  <path d="M 88 32 Q 100 45 112 32 M 95 32 C 92 60 90 90 88 110 M 105 32 C 108 60 110 90 112 110" stroke="currentColor" strokeWidth="1.2" opacity="0.45" strokeLinecap="round" />
 
-                {/* Garment 3: Tailored Blazer (Right) */}
-                <path d="M 135 32 L 128 75 L 172 75 L 165 32 Z" fill="var(--theme-accent)" opacity="0.25" />
-                <path d="M 135 32 L 146 55 L 146 75 M 165 32 L 154 55 L 154 75 M 140 32 L 150 48 L 160 32" stroke="currentColor" strokeWidth="1.2" opacity="0.5" strokeLinecap="round" />
-                
-                {/* Subtle Sparkle Detail */}
-                <circle cx="168" cy="22" r="2" fill="var(--theme-accent)" />
-                <circle cx="32" cy="18" r="1.5" fill="var(--theme-primary)" />
-              </svg>
+                  {/* Garment 3: Tailored Blazer (Right) */}
+                  <path d="M 135 32 L 128 75 L 172 75 L 165 32 Z" fill="var(--theme-accent)" opacity="0.25" />
+                  <path d="M 135 32 L 146 55 L 146 75 M 165 32 L 154 55 L 154 75 M 140 32 L 150 48 L 160 32" stroke="currentColor" strokeWidth="1.2" opacity="0.5" strokeLinecap="round" />
+                  
+                  {/* Subtle Sparkle Detail */}
+                  <circle cx="168" cy="22" r="2" fill="var(--theme-accent)" />
+                  <circle cx="32" cy="18" r="1.5" fill="var(--theme-primary)" />
+                </svg>
+              )}
             </div>
 
             {/* AI Status Tag */}

@@ -379,6 +379,7 @@ export const THEME_PRESETS: Record<
     label: string;
     tagline: string;
     heroEditorial: string;
+    heroGraphicImage?: string;
     defaultPortrait: string;
     portraits: { name: string; url: string; notes: string }[];
     garments: Garment[];
@@ -395,6 +396,7 @@ export const THEME_PRESETS: Record<
     name: 'Pink NOOR',
     label: 'Woman',
     tagline: 'Feminine elegance, blush tones & romantic silhouettes',
+    heroGraphicImage: '/assets/women-hero-mannequin.jpg',
     headerColors: {
       bg: '#4A0E2E',
       border: '#5E123B',
