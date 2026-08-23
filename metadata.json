@@ -1,0 +1,6 @@
+{
+  "name": "NOOR - Digital Atelier",
+  "description": "A luxury digital atelier and AI stylist that curates bespoke fashion silhouettes, archives, and virtual wardrobe ensembles with couture precision.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
