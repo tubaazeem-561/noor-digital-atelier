@@ -21,7 +21,12 @@ import {
   authLogout,
   subscribeAuthState
 } from './services/authService';
-import { getUserClosetItems } from './services/firestoreService';
+import {
+  getUserClosetItems,
+  addSavedLook,
+  getUserSavedLooks,
+  FirestoreSavedLookLayers
+} from './services/firestoreService';
 import { mapFirestoreCategoryToGarmentCategory } from './services/clothingPipelineService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -129,6 +134,48 @@ export function App() {
       }
     }).catch((err) => console.warn('Could not fetch Firestore closetItems:', err));
   }, [currentUser?.id, currentGender]);
+
+  // Sync savedLooks from Firestore collection
+  useEffect(() => {
+    const uid = currentUser?.id || 'demo-user';
+    getUserSavedLooks(uid).then((fsLooks) => {
+      if (fsLooks && fsLooks.length > 0) {
+        const newLooks: Look[] = fsLooks.map((fsl, idx) => {
+          const pieceIds: string[] = [];
+          if (fsl.layers) {
+            Object.values(fsl.layers).forEach((val) => {
+              if (typeof val === 'string') pieceIds.push(val);
+              else if (Array.isArray(val)) pieceIds.push(...val.filter((v) => typeof v === 'string'));
+            });
+          }
+
+          const lookPieces = garments.filter((g) => pieceIds.includes(g.id));
+          const coverImage = lookPieces[0]?.image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800';
+
+          return {
+            id: fsl.id || `fs-look-${idx}-${Date.now()}`,
+            ensembleNumber: `ENSEMBLE ${String(idx + 1).padStart(2, '0')}`,
+            title: fsl.name || `Saved Look ${idx + 1}`,
+            vibe: 'Personal Selection',
+            occasion: 'Versatile / Atelier',
+            image: coverImage,
+            aspectRatio: 'tall',
+            description: `Curated ensemble saved to personal NOOR digital archives on ${new Date(fsl.createdAt).toLocaleDateString()}.`,
+            stylingNotes: 'Personal ensemble saved from the Studio.',
+            pieces: lookPieces,
+            tags: ['Saved', 'Personal', 'Archives'],
+            isSaved: true
+          };
+        });
+
+        setLooks((prev) => {
+          const existingIds = new Set(prev.map((l) => l.id));
+          const filteredNew = newLooks.filter((l) => !existingIds.has(l.id));
+          return [...filteredNew, ...prev];
+        });
+      }
+    }).catch((err) => console.warn('Could not fetch Firestore savedLooks:', err));
+  }, [currentUser?.id, garments]);
 
   // Check if onboarding is required (first-time login / signup without onboarding)
   const isFirstTimeOnboarding = Boolean(
@@ -310,12 +357,35 @@ export function App() {
     }
   };
 
-  const handleCreateCustomLook = (customLook: Look) => {
-    const updated = [customLook, ...looks];
+  const handleCreateCustomLook = async (customLook: Look) => {
+    const updated = [{ ...customLook, isSaved: true }, ...looks];
     setLooks(updated);
-    setActiveLook(customLook);
+    setActiveLook({ ...customLook, isSaved: true });
     syncToActiveAccount(undefined, updated, undefined);
-    triggerToast(`Created "${customLook.title}".`);
+    triggerToast(`Saved "${customLook.title}" to Archives.`);
+
+    // Persist to Firestore savedLooks collection
+    const uid = currentUser?.id || 'demo-user';
+    const layers: FirestoreSavedLookLayers = {};
+    if (customLook.pieces && customLook.pieces.length > 0) {
+      customLook.pieces.forEach((p) => {
+        if (p.category === 'tops' || p.category === 'shirts/t-shirts') layers.torso = p.id;
+        else if (p.category === 'bottoms') layers.bottoms = p.id;
+        else if (p.category === 'shoes') layers.feet = p.id;
+        else if (p.category === 'hijab') layers.hijab = p.id;
+        else if (p.category === 'accessories' || p.category === 'bags') {
+          layers.accessories = layers.accessories ? [...layers.accessories, p.id] : [p.id];
+        } else {
+          layers[p.category] = p.id;
+        }
+      });
+    }
+
+    try {
+      await addSavedLook(uid, customLook.title, layers);
+    } catch (err) {
+      console.warn('Could not persist look to Firestore savedLooks:', err);
+    }
   };
 
   const handleUpdateSilhouette = (updated: Partial<UserSilhouette>) => {

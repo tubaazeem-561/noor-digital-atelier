@@ -144,9 +144,9 @@ export const SavedScreen: React.FC<SavedScreenProps> = ({
                   </div>
 
                   {/* Bottom overlay title info on image */}
-                  <div className="absolute bottom-4 left-4 right-4 text-white space-y-1">
+                  <div className="absolute bottom-4 left-4 right-4 text-white space-y-1.5">
                     <span className="text-[10px] font-mono uppercase tracking-widest text-white/80 block">
-                      {look.ensembleNumber}
+                      {look.ensembleNumber || 'ATELIER LOOK'}
                     </span>
                     <h3 className="font-serif text-xl sm:text-2xl font-normal leading-tight drop-shadow-sm group-hover:text-white transition-colors">
                       {look.title}
@@ -154,6 +154,26 @@ export const SavedScreen: React.FC<SavedScreenProps> = ({
                     <p className="text-xs text-white/80 font-sans line-clamp-1">
                       {look.occasion} • {look.vibe}
                     </p>
+
+                    {/* Piece Thumbnails Strip */}
+                    {look.pieces && look.pieces.length > 0 && (
+                      <div className="flex items-center gap-1.5 pt-1">
+                        {look.pieces.slice(0, 4).map((p) => (
+                          <img
+                            key={p.id}
+                            src={p.image}
+                            alt={p.name}
+                            className="w-7 h-7 rounded-lg object-cover border border-white/40 shadow-sm bg-black/20"
+                            title={p.name}
+                          />
+                        ))}
+                        {look.pieces.length > 4 && (
+                          <span className="text-[10px] font-sans font-semibold text-white/90 bg-black/50 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                            +{look.pieces.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
