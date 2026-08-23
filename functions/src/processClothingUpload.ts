@@ -40,7 +40,7 @@ export interface ProcessClothingResponse {
  * 4. Saves closetItems document in Firestore with owner, category, and imageUrl.
  */
 export const processClothingUpload = onCall(
-  { secrets: [geminiApiKey] },
+  { secrets: [geminiApiKey], timeoutSeconds: 30 },
   async (request): Promise<ProcessClothingResponse> => {
     const data = request.data as ProcessClothingRequest;
     if (!data || !data.imageBase64) {

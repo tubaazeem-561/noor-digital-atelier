@@ -85,12 +85,14 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const [image, setImage] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [processedGarment, setProcessedGarment] = useState<Garment | null>(null);
 
   if (!isOpen) return null;
 
   const processUploadedFile = async (file: File) => {
     setIsProcessing(true);
+    setErrorMessage(null);
     try {
       const result = await uploadAndProcessClothingPhoto(file, name || file.name, userUid, currentGender);
       setImage(result.imageUrl);
@@ -99,8 +101,9 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         setName(result.garment.name);
       }
       setProcessedGarment(result.garment);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error processing upload:', err);
+      setErrorMessage('This is taking longer than expected — please try again or select a sample item below.');
     } finally {
       setIsProcessing(false);
     }
@@ -176,6 +179,31 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
+
+        {/* Error Message Banner with dismissal */}
+        {errorMessage && (
+          <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl flex items-start justify-between gap-3 animate-fadeIn text-amber-900">
+            <div className="flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-amber-700 text-lg shrink-0 mt-0.5">
+                schedule
+              </span>
+              <div className="space-y-0.5">
+                <span className="font-serif text-xs font-semibold text-amber-950 block">
+                  Notice
+                </span>
+                <p className="font-sans text-xs text-amber-800 leading-relaxed">
+                  {errorMessage}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="text-amber-700 hover:text-amber-950 text-xs font-sans font-semibold underline cursor-pointer shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* AI Processing Status Banner */}
         {isProcessing && (

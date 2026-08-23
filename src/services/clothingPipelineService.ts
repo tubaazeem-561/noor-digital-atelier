@@ -67,7 +67,7 @@ export async function uploadAndProcessClothingPhoto(
     });
   }
 
-  // Attempt Cloud Function call
+  // Attempt Cloud Function call with strict 12s client timeout
   try {
     const processFn = httpsCallable<
       { imageBase64: string; mimeType: string; suggestedName?: string },
@@ -85,11 +85,19 @@ export async function uploadAndProcessClothingPhoto(
       }
     >(functions, 'processClothingUpload');
 
-    const res = await processFn({
-      imageBase64: base64Data,
-      mimeType,
-      suggestedName
+    const timeoutMs = 12000;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Cloud Function execution timed out (12s limit)')), timeoutMs);
     });
+
+    const res = await Promise.race([
+      processFn({
+        imageBase64: base64Data,
+        mimeType,
+        suggestedName
+      }),
+      timeoutPromise
+    ]);
 
     if (res.data && res.data.success && res.data.item) {
       const item = res.data.item;

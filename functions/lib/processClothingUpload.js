@@ -13,7 +13,7 @@ const geminiApiKey = (0, params_1.defineSecret)("GEMINI_API_KEY");
  * 3. Uploads processed asset to Firebase Storage under users/{uid}/closet/{itemId}.png.
  * 4. Saves closetItems document in Firestore with owner, category, and imageUrl.
  */
-exports.processClothingUpload = (0, https_1.onCall)({ secrets: [geminiApiKey] }, async (request) => {
+exports.processClothingUpload = (0, https_1.onCall)({ secrets: [geminiApiKey], timeoutSeconds: 30 }, async (request) => {
     const data = request.data;
     if (!data || !data.imageBase64) {
         throw new https_1.HttpsError("invalid-argument", "The function must be called with 'imageBase64'.");
