@@ -6,6 +6,7 @@
  * try AI-curated occasion presets, compare before/after, export a PNG, and save looks.
  */
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Garment } from '../types';
 
 /* ==========================================================================
    SOUND SYNTHESIZER (Web Audio API - Pure native game sound effects)
@@ -281,7 +282,7 @@ const removeImageBackground = (imageSrc, tolerance = 28) => {
 /* ==========================================================================
    MAIN APP COMPONENT
    ========================================================================== */
-export const FitCheckScreen: React.FC = () => {
+export const FitCheckScreen: React.FC<{ garments?: Garment[] }> = ({ garments = [] }) => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const playSfx = (type) => { if (soundEnabled) playAudioFx(type); };
 
@@ -290,16 +291,60 @@ export const FitCheckScreen: React.FC = () => {
   const [mannequinSkin, setMannequinSkin] = useState('#E8C5B0');
   const [mannequinHair, setMannequinHair] = useState('#3A2016');
 
-  const [closet, setCloset] = useState(PRESET_CLOTHING);
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState("all");
-
-  const [equippedItems, setEquippedItems] = useState({
-    "p-top-1": { ...PRESET_CLOTHING[0].defaultAnchor },
-    "p-bot-1": { ...PRESET_CLOTHING[3].defaultAnchor },
-    "p-shoe-1": { ...PRESET_CLOTHING[5].defaultAnchor }
+  const [closet, setCloset] = useState(() => {
+    if (garments && garments.length > 0) {
+      return garments.map(g => {
+        let category = 'top';
+        if (g.category === 'bottoms') category = 'bottom';
+        else if (g.category === 'shoes') category = 'shoes';
+        else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') category = 'accessory';
+        return {
+          id: g.id,
+          name: g.name,
+          category,
+          brand: g.brand || 'Personal',
+          url: g.image,
+          rawUrl: g.image,
+        };
+      });
+    }
+    return PRESET_CLOTHING;
   });
 
-  const [selectedStageItemId, setSelectedStageItemId] = useState("p-top-1");
+  useEffect(() => {
+    if (garments && garments.length > 0) {
+      setCloset(garments.map(g => {
+        let category = 'top';
+        if (g.category === 'bottoms') category = 'bottom';
+        else if (g.category === 'shoes') category = 'shoes';
+        else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') category = 'accessory';
+        return {
+          id: g.id,
+          name: g.name,
+          category,
+          brand: g.brand || 'Personal',
+          url: g.image,
+          rawUrl: g.image,
+        };
+      }));
+    }
+  }, [garments]);
+
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState("all");
+
+  const [equippedItems, setEquippedItems] = useState(() => {
+    if (garments && garments.length > 0) return {};
+    return {
+      "p-top-1": { ...PRESET_CLOTHING[0].defaultAnchor },
+      "p-bot-1": { ...PRESET_CLOTHING[3].defaultAnchor },
+      "p-shoe-1": { ...PRESET_CLOTHING[5].defaultAnchor }
+    };
+  });
+
+  const [selectedStageItemId, setSelectedStageItemId] = useState(() => {
+    if (garments && garments.length > 0) return null;
+    return "p-top-1";
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState(null);
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, itemTop: 0, itemLeft: 0, itemW: 0, itemH: 0, rot: 0 });

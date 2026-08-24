@@ -523,7 +523,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'fit-check' && <FitCheckScreen />}
+        {activeTab === 'fit-check' && <FitCheckScreen garments={garments} />}
 
         {activeTab === 'saved' && (
           <SavedScreen
