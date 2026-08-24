@@ -227,53 +227,61 @@ const OCCASIONS = [
 const removeImageBackground = (imageSrc, tolerance = 28) => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = "Anonymous";
+    // NOTE: no crossOrigin here — imageSrc is always a same-origin data: URL
+    // (from FileReader). Setting crossOrigin="Anonymous" on a data: URL can make
+    // getImageData() below throw a SecurityError inside onload, which — since it
+    // wasn't caught — left this promise unresolved forever (stuck "Processing…").
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
 
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
-      
-      const corners = [
-        [0, 0],
-        [canvas.width - 1, 0],
-        [0, canvas.height - 1],
-        [canvas.width - 1, canvas.height - 1]
-      ];
-      let bgR = 0, bgG = 0, bgB = 0;
-      corners.forEach(([x, y]) => {
-        const idx = (y * canvas.width + x) * 4;
-        bgR += data[idx];
-        bgG += data[idx + 1];
-        bgB += data[idx + 2];
-      });
-      bgR = Math.round(bgR / 4);
-      bgG = Math.round(bgG / 4);
-      bgB = Math.round(bgB / 4);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
 
-      const tolSq = tolerance * tolerance * 3;
+        const corners = [
+          [0, 0],
+          [canvas.width - 1, 0],
+          [0, canvas.height - 1],
+          [canvas.width - 1, canvas.height - 1]
+        ];
+        let bgR = 0, bgG = 0, bgB = 0;
+        corners.forEach(([x, y]) => {
+          const idx = (y * canvas.width + x) * 4;
+          bgR += data[idx];
+          bgG += data[idx + 1];
+          bgB += data[idx + 2];
+        });
+        bgR = Math.round(bgR / 4);
+        bgG = Math.round(bgG / 4);
+        bgB = Math.round(bgB / 4);
 
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const dr = r - bgR;
-        const dg = g - bgG;
-        const db = b - bgB;
-        const distSq = dr * dr + dg * dg + db * db;
+        const tolSq = tolerance * tolerance * 3;
 
-        if (distSq < tolSq || (r > 240 && g > 240 && b > 240 && tolerance > 15)) {
-          const alphaFade = Math.min(1, Math.max(0, (distSq - (tolSq * 0.4)) / (tolSq * 0.6)));
-          data[i + 3] = Math.round(data[i + 3] * alphaFade);
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const dr = r - bgR;
+          const dg = g - bgG;
+          const db = b - bgB;
+          const distSq = dr * dr + dg * dg + db * db;
+
+          if (distSq < tolSq || (r > 240 && g > 240 && b > 240 && tolerance > 15)) {
+            const alphaFade = Math.min(1, Math.max(0, (distSq - (tolSq * 0.4)) / (tolSq * 0.6)));
+            data[i + 3] = Math.round(data[i + 3] * alphaFade);
+          }
         }
-      }
 
-      ctx.putImageData(imgData, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
+        ctx.putImageData(imgData, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (err) {
+        // Never leave the caller hanging — fall back to the original image.
+        resolve(imageSrc);
+      }
     };
     img.onerror = () => resolve(imageSrc);
     img.src = imageSrc;
