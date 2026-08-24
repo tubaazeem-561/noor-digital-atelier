@@ -6,6 +6,7 @@
  * try AI-curated occasion presets, compare before/after, export a PNG, and save looks.
  */
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { removeStudioBackground } from '../utils/imageProcessing';
 import { Garment } from '../types';
 
 /* ==========================================================================
@@ -282,7 +283,7 @@ const removeImageBackground = (imageSrc, tolerance = 28) => {
 /* ==========================================================================
    MAIN APP COMPONENT
    ========================================================================== */
-export const FitCheckScreen: React.FC<{ garments?: Garment[] }> = ({ garments = [] }) => {
+export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => void }> = ({ garments = [], onBack }) => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const playSfx = (type) => { if (soundEnabled) playAudioFx(type); };
 
@@ -291,43 +292,47 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[] }> = ({ garments = 
   const [mannequinSkin, setMannequinSkin] = useState('#E8C5B0');
   const [mannequinHair, setMannequinHair] = useState('#3A2016');
 
-  const [closet, setCloset] = useState(() => {
-    if (garments && garments.length > 0) {
-      return garments.map(g => {
-        let category = 'top';
-        if (g.category === 'bottoms') category = 'bottom';
-        else if (g.category === 'shoes') category = 'shoes';
-        else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') category = 'accessory';
-        return {
-          id: g.id,
-          name: g.name,
-          category,
-          brand: g.brand || 'Personal',
-          url: g.image,
-          rawUrl: g.image,
-        };
-      });
-    }
+  const [closet, setCloset] = useState<any[]>(() => {
+    if (garments && garments.length > 0) return [];
     return PRESET_CLOTHING;
   });
+  const [isProcessingCloset, setIsProcessingCloset] = useState(false);
 
   useEffect(() => {
-    if (garments && garments.length > 0) {
-      setCloset(garments.map(g => {
-        let category = 'top';
-        if (g.category === 'bottoms') category = 'bottom';
-        else if (g.category === 'shoes') category = 'shoes';
-        else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') category = 'accessory';
-        return {
-          id: g.id,
-          name: g.name,
-          category,
-          brand: g.brand || 'Personal',
-          url: g.image,
-          rawUrl: g.image,
-        };
-      }));
-    }
+    let isMounted = true;
+    const processGarments = async () => {
+      if (garments && garments.length > 0) {
+        if (isMounted) setIsProcessingCloset(true);
+        try {
+          const processed = await Promise.all(
+            garments.map(async (g) => {
+              let category = 'top';
+              if (g.category === 'bottoms') category = 'bottom';
+              else if (g.category === 'shoes') category = 'shoes';
+              else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') category = 'accessory';
+              
+              const cleanImage = await removeStudioBackground(g.image);
+              
+              return {
+                id: g.id,
+                name: g.name,
+                category,
+                brand: g.brand || 'Personal',
+                url: cleanImage,
+                rawUrl: g.image,
+              };
+            })
+          );
+          if (isMounted) setCloset(processed);
+        } finally {
+          if (isMounted) setIsProcessingCloset(false);
+        }
+      } else {
+        if (isMounted) setCloset(PRESET_CLOTHING);
+      }
+    };
+    processGarments();
+    return () => { isMounted = false; };
   }, [garments]);
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState("all");
@@ -728,6 +733,17 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[] }> = ({ garments = 
       {/* Navigation Header */}
       <header className="rounded-3xl bg-[#34121C] text-white px-6 sm:px-10 py-3.5 flex items-center justify-between shadow-lg mb-6">
         <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+              title="Back"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
           <div className="w-9 h-9 rounded-full bg-[#D6417E] flex items-center justify-center font-display font-bold text-white text-lg">
             N
           </div>
@@ -892,7 +908,13 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[] }> = ({ garments = 
                 <MagicWandIcon className="w-3.5 h-3.5 text-[#D6417E]" />
                 Auto-removes backgrounds on upload
               </span>
-              <span className="font-mono text-[#D6417E] font-medium">{closet.length} items</span>
+              <span className="font-mono text-[#D6417E] font-medium">
+                {isProcessingCloset ? (
+                  <span className="animate-pulse">Processing...</span>
+                ) : (
+                  `${closet.length} items`
+                )}
+              </span>
             </div>
           </div>
         </div>
