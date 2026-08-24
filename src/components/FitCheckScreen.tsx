@@ -291,6 +291,48 @@ const removeImageBackground = (imageSrc, tolerance = 28) => {
 };
 
 /* ==========================================================================
+   SMART POSITIONING LOGIC
+   ========================================================================== */
+const getAnchorForGarment = (fileName, baseCategory) => {
+  const lower = (fileName || "").toLowerCase();
+  
+  let category = baseCategory || "top";
+  let anchor = { top: 24, left: 24, width: 52, height: 34, rotation: 0, flipH: false, zIndex: 10 }; // Default top
+
+  if (lower.includes("pant") || lower.includes("jean") || lower.includes("skirt") || lower.includes("short") || lower.includes("trouser") || lower.includes("bottom") || lower.includes("sweatpant") || lower.includes("legging")) {
+    category = "bottom";
+    anchor = { top: 48, left: 25, width: 50, height: 42, rotation: 0, flipH: false, zIndex: 12 };
+  } else if (lower.includes("shoe") || lower.includes("sneaker") || lower.includes("boot") || lower.includes("heel") || lower.includes("sandal") || lower.includes("loafer") || lower.includes("footwear")) {
+    category = "shoes";
+    anchor = { top: 83, left: 28, width: 44, height: 16, rotation: 0, flipH: false, zIndex: 15 };
+  } else if (lower.includes("bag") || lower.includes("purse") || lower.includes("tote") || lower.includes("backpack") || lower.includes("clutch")) {
+    category = "accessory";
+    anchor = { top: 38, left: 16, width: 26, height: 28, rotation: -6, flipH: false, zIndex: 28 };
+  } else if (lower.includes("glass") || lower.includes("sunglass") || lower.includes("shades")) {
+    category = "accessory";
+    anchor = { top: 12.5, left: 38, width: 24, height: 8, rotation: 0, flipH: false, zIndex: 30 };
+  } else if (lower.includes("hat") || lower.includes("cap") || lower.includes("beanie") || lower.includes("hood") || lower.includes("beret")) {
+    category = "accessory";
+    anchor = { top: -2, left: 35, width: 30, height: 18, rotation: 0, flipH: false, zIndex: 32 };
+  } else if (lower.includes("belt")) {
+    category = "accessory";
+    anchor = { top: 46, left: 30, width: 40, height: 8, rotation: 0, flipH: false, zIndex: 14 };
+  } else if (lower.includes("scarf") || lower.includes("neck") || lower.includes("tie") || lower.includes("choker")) {
+    category = "accessory";
+    anchor = { top: 18, left: 35, width: 30, height: 15, rotation: 0, flipH: false, zIndex: 25 };
+  } else if (category === "bottom") {
+    anchor = { top: 48, left: 25, width: 50, height: 42, rotation: 0, flipH: false, zIndex: 12 };
+  } else if (category === "shoes") {
+    anchor = { top: 83, left: 28, width: 44, height: 16, rotation: 0, flipH: false, zIndex: 15 };
+  } else if (category === "accessory") {
+    // Default accessory if no specific keyword matches (assume it's something held/worn midway like a bag)
+    anchor = { top: 38, left: 16, width: 26, height: 28, rotation: -6, flipH: false, zIndex: 28 };
+  }
+
+  return { category, anchor };
+};
+
+/* ==========================================================================
    MAIN APP COMPONENT
    ========================================================================== */
 export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => void }> = ({ garments = [], onBack }) => {
@@ -316,12 +358,13 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
         try {
           const processed = await Promise.all(
             garments.map(async (g) => {
-              let category = 'top';
-              if (g.category === 'bottoms') category = 'bottom';
-              else if (g.category === 'shoes') category = 'shoes';
-              else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') category = 'accessory';
+              let baseCategory = 'top';
+              if (g.category === 'bottoms') baseCategory = 'bottom';
+              else if (g.category === 'shoes') baseCategory = 'shoes';
+              else if (g.category === 'accessories' || g.category === 'bags' || g.category === 'tie') baseCategory = 'accessory';
               
               const cleanImage = await removeStudioBackground(g.image);
+              const { category, anchor } = getAnchorForGarment(g.name, baseCategory);
               
               return {
                 id: g.id,
@@ -330,6 +373,7 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
                 brand: g.brand || 'Personal',
                 url: cleanImage,
                 rawUrl: g.image,
+                defaultAnchor: anchor
               };
             })
           );
@@ -401,10 +445,8 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
       } else {
         let anchor = item.defaultAnchor;
         if (!anchor) {
-          if (item.category === 'top') anchor = { top: 24, left: 24, width: 52, height: 34, rotation: 0, flipH: false, zIndex: 10 };
-          else if (item.category === 'bottom') anchor = { top: 48, left: 25, width: 50, height: 42, rotation: 0, flipH: false, zIndex: 12 };
-          else if (item.category === 'shoes') anchor = { top: 82, left: 28, width: 44, height: 16, rotation: 0, flipH: false, zIndex: 15 };
-          else anchor = { top: 18, left: 32, width: 36, height: 24, rotation: 0, flipH: false, zIndex: 28 };
+          const { anchor: fallbackAnchor } = getAnchorForGarment(item.name, item.category);
+          anchor = fallbackAnchor;
         }
         next[item.id] = { ...anchor, blendMode: 'normal', opacity: 1 };
         setSelectedStageItemId(item.id);
@@ -445,15 +487,7 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
       const fileName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ");
       const formattedName = fileName.replace(/\b\w/g, (c) => c.toUpperCase());
       
-      let guessedCategory = "top";
-      const lower = fileName.toLowerCase();
-      if (lower.includes("pant") || lower.includes("jean") || lower.includes("skirt") || lower.includes("short") || lower.includes("trouser") || lower.includes("bottom")) {
-        guessedCategory = "bottom";
-      } else if (lower.includes("shoe") || lower.includes("sneaker") || lower.includes("boot") || lower.includes("heel") || lower.includes("sandal")) {
-        guessedCategory = "shoes";
-      } else if (lower.includes("hat") || lower.includes("bag") || lower.includes("glass") || lower.includes("belt") || lower.includes("scarf")) {
-        guessedCategory = "accessory";
-      }
+      const { category: guessedCategory, anchor } = getAnchorForGarment(fileName, "top");
 
       newItems.push({
         id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -461,7 +495,8 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
         category: guessedCategory,
         brand: "Custom Upload",
         url: transparentUrl,
-        rawUrl: rawDataUrl
+        rawUrl: rawDataUrl,
+        defaultAnchor: anchor
       });
     }
 
