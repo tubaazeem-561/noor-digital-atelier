@@ -86,6 +86,8 @@ const MagicWandIcon = (props) => <svg {...iconProps(props)}><line x1="4" y1="20"
 const ResetIcon = (props) => <svg {...iconProps(props)}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>;
 const Volume2Icon = (props) => <svg {...iconProps(props)}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>;
 const VolumeXIcon = (props) => <svg {...iconProps(props)}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>;
+const ZoomInIcon = (props) => <svg {...iconProps(props)}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>;
+const ZoomOutIcon = (props) => <svg {...iconProps(props)}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="8" y1="11" x2="14" y2="11" /></svg>;
 
 /* ==========================================================================
    PRESET MODELS & STARTER WARDROBE
@@ -587,6 +589,23 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
       return {
         ...prev,
         [itemId]: { ...item, flipH: !item.flipH }
+      };
+    });
+  };
+
+  const adjustScale = (itemId, action) => {
+    setEquippedItems((prev) => {
+      const item = prev[itemId];
+      if (!item) return prev;
+      playSfx('snap');
+      const factor = action === 'in' ? 1.1 : (1 / 1.1);
+      return {
+        ...prev,
+        [itemId]: { 
+          ...item, 
+          width: Math.max(10, Math.min(200, item.width * factor)),
+          height: Math.max(10, Math.min(200, item.height * factor))
+        }
       };
     });
   };
@@ -1206,6 +1225,18 @@ export const FitCheckScreen: React.FC<{ garments?: Garment[], onBack?: () => voi
                   className="text-xs py-2 px-2.5 rounded-xl bg-[#FAF7F8] hover:bg-[#FBE4EA] border border-[#F3C7D3] font-medium flex items-center justify-center gap-1.5"
                 >
                   <LayersIcon className="w-3.5 h-3.5 text-[#D6417E]" /> Layer Up
+                </button>
+                <button
+                  onClick={() => adjustScale(activeSelectedPiece.id, 'out')}
+                  className="text-xs py-2 px-2.5 rounded-xl bg-[#FAF7F8] hover:bg-[#FBE4EA] border border-[#F3C7D3] font-medium flex items-center justify-center gap-1.5"
+                >
+                  <ZoomOutIcon className="w-3.5 h-3.5 text-[#D6417E]" /> Zoom Out
+                </button>
+                <button
+                  onClick={() => adjustScale(activeSelectedPiece.id, 'in')}
+                  className="text-xs py-2 px-2.5 rounded-xl bg-[#FAF7F8] hover:bg-[#FBE4EA] border border-[#F3C7D3] font-medium flex items-center justify-center gap-1.5"
+                >
+                  <ZoomInIcon className="w-3.5 h-3.5 text-[#D6417E]" /> Zoom In
                 </button>
               </div>
 
