@@ -1,15 +1,8 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../services/firebase';
-
-interface RemoveBackgroundResponse {
-  success: boolean;
-  imageBase64?: string;
-  error?: string;
-}
+import { removeBackground } from '@imgly/background-removal';
 
 /**
- * Processes an image base64 data URL to cleanly segment and remove the background
- * using a dedicated AI Cloud Function (imgly background removal).
+ * Processes an image data URL to cleanly segment and remove the background
+ * using @imgly/background-removal in the browser.
  * Falls back to the original image if the process fails or returns empty.
  */
 export async function removeStudioBackground(base64Data: string): Promise<string> {
@@ -18,21 +11,24 @@ export async function removeStudioBackground(base64Data: string): Promise<string
   }
 
   try {
-    const removeBgFn = httpsCallable<{ imageBase64: string }, RemoveBackgroundResponse>(
-      functions,
-      'removeImageBackground'
-    );
-
-    const result = await removeBgFn({ imageBase64: base64Data });
-
-    if (result.data && result.data.success && result.data.imageBase64) {
-      return result.data.imageBase64;
-    } else {
-      console.warn('AI Background removal failed or returned empty. Falling back to original.', result.data?.error);
-      return base64Data;
-    }
+    // removeBackground can accept a base64 string directly
+    const blob = await removeBackground(base64Data);
+    
+    // Convert Blob back to base64 Data URL
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error("Failed to convert blob to base64"));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   } catch (error) {
-    console.warn('Error calling removeImageBackground Cloud Function. Falling back to original.', error);
+    console.warn('Error during background removal. Falling back to original.', error);
     return base64Data;
   }
 }
