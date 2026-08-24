@@ -1,4 +1,4 @@
-export type TabType = 'home' | 'photo' | 'closet' | 'style' | 'look-detail' | 'saved';
+export type TabType = 'home' | 'photo' | 'closet' | 'style' | 'look-detail' | 'saved' | 'fit-check';
 
 export type GenderPreference = 'woman' | 'man' | 'others';
 

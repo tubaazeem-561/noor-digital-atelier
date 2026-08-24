@@ -35,6 +35,7 @@ import { HomeScreen } from './components/HomeScreen';
 import { PhotoScreen } from './components/PhotoScreen';
 import { ClosetScreen } from './components/ClosetScreen';
 import { StyleScreen } from './components/StyleScreen';
+import { FitCheckScreen } from './components/FitCheckScreen';
 import { LookDetailScreen } from './components/LookDetailScreen';
 import { SavedScreen } from './components/SavedScreen';
 import { AddGarmentModal } from './components/AddGarmentModal';
@@ -521,6 +522,8 @@ export function App() {
             onSelectGarment={(garment) => setSelectedGarmentForDetail(garment)}
           />
         )}
+
+        {activeTab === 'fit-check' && <FitCheckScreen />}
 
         {activeTab === 'saved' && (
           <SavedScreen
